@@ -59,6 +59,12 @@ yargs(hideBin(process.argv))
             type: "string",
             nargs: 1,
           },
+          "size-limit": {
+            desc: "the size limit of the output file in MB, use 0 for no limit",
+            alias: "sl",
+            default: 4,
+            type: "number",
+          },
           crf: {
             desc: "the crf to use",
             default: 24,
