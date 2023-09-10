@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "pwebm",
+  "version": "0.0.1",
+  "description": "TBD",
+  "module": "index.ts",
+  "type": "module",
+  "author": "4ndrs <andres.degozaru@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/4ndrs/pwebm#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/4ndrs/pwebm.git"
+  },
+  "bugs": {
+    "url": "git+https://github.com/4ndrs/pwebm/issues"
+  },
+  "bin": {
+    "pwebm": "index.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
