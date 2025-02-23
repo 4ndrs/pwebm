@@ -1,15 +1,20 @@
+import { logger } from "./logger";
 import { FFProbeSchema } from "./schema/ffprobe";
 
 const args = Bun.argv.slice(2);
+
+logger.info("argv: " + args.join(" "));
 
 let inputFile: string;
 
 if (args[0] === "-i" && args[1] !== undefined) {
   inputFile = args[1];
 } else {
-  console.error("Usage: pwebm -i <input>");
+  logger.error("Input file is required");
 
-  process.exit(1);
+  console.info("Usage: pwebm -i <input>");
+
+  throw new Error();
 }
 
 const ffprobeProcess = Bun.spawnSync([
@@ -24,8 +29,9 @@ const ffprobeProcess = Bun.spawnSync([
 ]);
 
 if (!ffprobeProcess.success) {
-  console.error("Error reading the file");
-  process.exit(1);
+  logger.error("Error reading the file");
+
+  throw new Error();
 }
 
 const parsedOutput = FFProbeSchema.safeParse(
@@ -33,11 +39,11 @@ const parsedOutput = FFProbeSchema.safeParse(
 );
 
 if (!parsedOutput.success) {
-  console.error("Error parsing the output from ffprobe");
+  logger.error("Error parsing the output from ffprobe");
 
-  console.error(parsedOutput.error.errors);
+  logger.error(parsedOutput.error.errors);
 
-  process.exit(1);
+  throw new Error();
 }
 
 console.log(parsedOutput.data);
