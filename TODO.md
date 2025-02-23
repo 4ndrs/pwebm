@@ -22,3 +22,24 @@ some considerations:
     - it has to work with PureMPV (through pwebm-helper), tail log is nice but would be also nice
       to have some kind of keybinding on the helper to show the status of the encoding on the mpv
       window
+
+## Stuff
+
+- [ ] argument parser
+- [ ] convert webm, retry when limit reached
+- [ ] convert any other encoder to mkv copied streams just like purewebm
+- [ ] ffmpeg progress
+- [ ] socket file for communication
+- [ ] kill implementation
+- [ ] status implementation
+- [ ] version implementation
+- [ ] help implementation
+- [ ] add automatic releases with github actions (edge + tagged)
+- [ ] add bun bundled executable package releases to the automatic releases
+- [ ] update readme
+- [ ] release tagged versions in npm
+- [ ] it's not part of this repo, but don't forget to improve the helper script for PureMPV (pwebm-helper), it has a missing readme
+
+### the following is just extra not implemented on purewebm but was its initial vision (can skip)
+- [ ] implement conversion logger view (save previous conversions to db with last bitrate info)
+- [ ] redo conversions in logger view
