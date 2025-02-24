@@ -1,15 +1,16 @@
-import { config } from "./config";
-import { logger } from "./logger";
-import { ArgsSchema } from "./schema/args";
-
 import {
   AUTHOR,
   LICENSE,
   VERSION,
+  HOMEPAGE,
   CLI_NAME,
   DESCRIPTION,
   COPYRIGHT_YEAR,
 } from "./constants";
+
+import { config } from "./config";
+import { logger } from "./logger";
+import { ArgsSchema } from "./schema/args";
 
 const RECOGNIZED_ARGS = [
   "-h",
@@ -52,7 +53,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
     if (["-v", "--version"].includes(arg)) {
       logger.info(
-        `${CLI_NAME} version ${VERSION}\nCopyright (c) ${COPYRIGHT_YEAR} ${AUTHOR}\nLicensed under the ${LICENSE} License`,
+        `${CLI_NAME} version ${VERSION}\nCopyright (c) ${COPYRIGHT_YEAR} ${AUTHOR}\nLicensed under the ${LICENSE} License\n${HOMEPAGE}`,
         { onlyConsole: true },
       );
       process.exit();

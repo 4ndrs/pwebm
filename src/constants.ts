@@ -9,4 +9,4 @@ export const VERSION = packageJson.version;
 export const LICENSE = packageJson.license;
 export const HOMEPAGE = packageJson.homepage;
 export const DESCRIPTION = packageJson.description;
-export const COPYRIGHT_YEAR = "2023";
+export const COPYRIGHT_YEAR = "2023-2025";
