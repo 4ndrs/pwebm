@@ -19,4 +19,4 @@ switch (os.platform()) {
 }
 
 export const CONFIG_PATH = configPath;
-export const DEFAULT_VIDEOS_PATH = videoPath;
+export const DEFAULT_VIDEO_PATH = videoPath;

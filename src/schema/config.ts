@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_VIDEOS_PATH } from "../paths";
+import { DEFAULT_VIDEO_PATH } from "../paths";
 
 export const ConfigSchema = z.object({
   subs: z.boolean().default(false),
@@ -17,7 +17,7 @@ export const ConfigSchema = z.object({
     ])
     .default(0),
   deadline: z.enum(["good", "best"]).default("good"),
-  videosPath: z.string().default(DEFAULT_VIDEOS_PATH),
+  videoPath: z.string().default(DEFAULT_VIDEO_PATH),
 });
 
 export type ConfigSchema = z.infer<typeof ConfigSchema>;

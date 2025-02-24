@@ -23,7 +23,7 @@ export const ArgsSchema = ConfigSchema.merge(
     cpuUsed: ConfigSchema.shape.cpuUsed.default(config.cpuUsed),
     deadline: ConfigSchema.shape.deadline.default(config.deadline),
     sizeLimit: ConfigSchema.shape.sizeLimit.default(config.sizeLimit),
-    videosPath: ConfigSchema.shape.videosPath.default(config.videosPath),
+    videoPath: ConfigSchema.shape.videoPath.default(config.videoPath),
   }),
 );
 
