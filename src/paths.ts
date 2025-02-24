@@ -1,11 +1,11 @@
 import os from "os";
 import path from "path";
-import envPaths from "env-paths";
 
 import { CLI_NAME } from "./constants";
 
 const home = os.homedir();
-const paths = envPaths(CLI_NAME, { suffix: "" });
+
+const configPath = path.join(home, ".config", CLI_NAME);
 
 let videoPath: string;
 
@@ -18,5 +18,5 @@ switch (os.platform()) {
     videoPath = path.join(home, "Videos", CLI_NAME);
 }
 
-export const CONFIG_PATH = paths.config;
+export const CONFIG_PATH = configPath;
 export const DEFAULT_VIDEOS_PATH = videoPath;
