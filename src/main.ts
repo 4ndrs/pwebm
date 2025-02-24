@@ -1,9 +1,12 @@
+import { parseArgs } from "./args";
 import { logger } from "./logger";
 import { FFProbeSchema } from "./schema/ffprobe";
 
 const args = Bun.argv.slice(2);
 
 logger.info("argv: " + args.join(" "));
+
+const parsedArgs = parseArgs(args);
 
 let inputFile: string;
 

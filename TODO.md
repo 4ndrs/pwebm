@@ -43,3 +43,19 @@ some considerations:
 ### the following is just extra not implemented on purewebm but was its initial vision (can skip)
 - [ ] implement conversion logger view (save previous conversions to db with last bitrate info)
 - [ ] redo conversions in logger view
+- [ ] add limit for the amount of tries to redo a conversion
+- [ ] percentage bitrate offset when retrying a conversion with new calcs
+
+## 2025-02-24
+- [x] parse quick actions with mocks and exit (status, kill, version, help)
+- [ ] throw error on unrecognized args
+- [ ] parse input flags (can be multiple, with either input or output seeking)
+- [ ] parse subs flag
+- [ ] parse crf flag
+- [ ] parse cpu-used flag
+- [ ] parse deadline flag
+- [ ] parse lavfi flag
+- [ ] parse size limit flag
+- [ ] parse extra params flag
+- [ ] parse videos path flag (will be ignored if output is set)
+- [ ] parse output file positional option

@@ -5,9 +5,6 @@ import { ConfigSchema } from "./config";
 export const ArgsSchema = ConfigSchema.merge(
   z.object({
     output: z.string().optional(),
-    version: z.boolean().optional(),
-    status: z.boolean().optional(),
-    kill: z.boolean().optional(),
     inputs: z.array(
       z.object({
         file: z.string(),
