@@ -15,7 +15,7 @@ if (args[0] === "-i" && args[1] !== undefined) {
 } else {
   logger.error("Input file is required");
 
-  console.info("Usage: pwebm -i <input>");
+  logger.info("Usage: pwebm -i <input>", { onlyConsole: true });
 
   process.exit(1);
 }
@@ -49,4 +49,4 @@ if (!parsedOutput.success) {
   process.exit(1);
 }
 
-console.log(parsedOutput.data);
+logger.info(parsedOutput.data, { onlyConsole: true });

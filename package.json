@@ -18,7 +18,7 @@
   "bugs": {
     "url": "git+https://github.com/4ndrs/pwebm/issues"
   },
-  "description": "TBD",
+  "description": "Utility to encode size restricted webm files with ffmpeg",
   "homepage": "https://github.com/4ndrs/pwebm",
   "license": "MIT",
   "type": "module",
