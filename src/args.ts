@@ -36,7 +36,33 @@ const RECOGNIZED_ARGS = [
 ];
 
 export const parseArgs = (args: string[]): ArgsSchema => {
-  for (const arg of args) {
+  if (args.length === 0) {
+    printUsage();
+
+    // if the user isn't using any of the quick actions we require the -i flag
+    logger.error("Input file is required");
+
+    process.exit(1);
+  }
+
+  const rawArgs: Partial<ArgsSchema> = {};
+
+  let skip = false;
+  let isExtraParam = false;
+
+  const skipNext = () => (skip = true);
+
+  args.forEach((arg, index) => {
+    if (skip) {
+      skip = false;
+      return;
+    }
+
+    if (isExtraParam) {
+      rawArgs.extraParams?.push(arg);
+      return;
+    }
+
     if (arg.startsWith("-") && !RECOGNIZED_ARGS.includes(arg)) {
       printUsage();
 
@@ -68,11 +94,207 @@ export const parseArgs = (args: string[]): ArgsSchema => {
       logger.info("Requested status", { onlyConsole: true });
       process.exit();
     }
-  }
+
+    if (!arg.startsWith("-") && !arg.startsWith("--")) {
+      if (rawArgs.output) {
+        logger.error("Only one output file is allowed");
+
+        logger.debug(
+          `Current output file: ${rawArgs.output}, new file: ${arg}`,
+        );
+
+        process.exit(1);
+      }
+
+      rawArgs.output = arg;
+
+      return;
+    }
+
+    if (arg === "-i") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-subs") {
+      rawArgs.subs = true;
+
+      return;
+    }
+
+    if (arg === "-sl" || arg === "--size-limit") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      const sizeLimit = Number(args[index + 1]);
+
+      if (isNaN(sizeLimit)) {
+        logInvalidNumber(arg, sizeLimit);
+
+        process.exit(1);
+      }
+
+      rawArgs.sizeLimit = sizeLimit;
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-ep" || arg === "--extra-params") {
+      if (args[index + 1] === undefined) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      isExtraParam = true;
+
+      rawArgs.extraParams = [];
+
+      return;
+    }
+
+    if (arg === "--video-path") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      rawArgs.videoPath = args[index + 1];
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-crf") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      const crf = Number(args[index + 1]);
+
+      if (isNaN(crf)) {
+        logInvalidNumber(arg, crf);
+
+        process.exit(1);
+      }
+
+      rawArgs.crf = crf;
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-cpu-used") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      const cpuUsed = Number(args[index + 1]);
+
+      if (isNaN(cpuUsed)) {
+        logInvalidNumber(arg, cpuUsed);
+
+        process.exit(1);
+      }
+
+      if (ArgsSchema.shape.cpuUsed.safeParse(cpuUsed).success === false) {
+        logger.error(
+          `The ${arg} flag requires a number between 0 and 5 inclusive. "${cpuUsed}" is out of that range`,
+        );
+
+        process.exit(1);
+      }
+
+      rawArgs.cpuUsed = cpuUsed as 0 | 1 | 2 | 3 | 4 | 5;
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-deadline") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      if (!["good", "best"].includes(args[index + 1])) {
+        logger.error(
+          `The ${arg} flag requires either "good" or "best". "${args[index + 1]}" is not a valid value`,
+        );
+
+        process.exit(1);
+      }
+
+      rawArgs.deadline = args[index + 1] as "good" | "best";
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-c:v") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      rawArgs.encoder = args[index + 1];
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-lavfi") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      rawArgs.lavfi = args[index + 1];
+
+      skipNext();
+
+      return;
+    }
+  });
+
+  console.log("rawArgs", rawArgs);
 };
 
+const logMissingArg = (arg: string) =>
+  logger.error(`The ${arg} flag requires an argument`);
+
+const logInvalidNumber = (arg: string, value: number) =>
+  logger.error(
+    `The ${arg} flag requires a number. "${value}" is not a valid number`,
+  );
+
 const printUsage = () => {
-  const usage = `Usage: ${CLI_NAME} [options] [[infile options] -i infile]... [[outfile options] outfile]...
+  const usage = `Usage: ${CLI_NAME} [options] [[infile options] -i infile]... [outfile options] [outfile] [extra params]
 
 ${DESCRIPTION}
 
@@ -99,15 +321,16 @@ Options:
                              the subtitles found in the first input file, to use a different file use
                              the -lavfi flag with the subtitles filter directly
   -sl, --size-limit <limit>  The size limit of the output file in MiB, use 0 for no limit (default is ${config.sizeLimit})
-  -ep, --extra-params <params>
-                             The extra parameters to pass to ffmpeg, these will be appended making it
-                             possible to override some defaults
   --video-path <path>        The video path where the video files are stored (default is ${config.videoPath})
                              this is overridden if the output file is specified
+  -ep, --extra-params <params>
+                             The extra parameters to pass to ffmpeg, these will be appended making it
+                             possible to override some defaults. This option has to be the last one, everything
+                             will be passed as is to ffmpeg
 
 Examples:
   ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" -ss 00:00:02.268 -to 00:00:10.310 
-  ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" --size_limit 6 -subs --extra_params '-map 0:a -c:a libopus -b:a 128k'`;
+  ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" --size-limit 6 -subs --extra-params -map 0:a -c:a libopus -b:a 128k`;
 
   logger.info(usage, {
     onlyConsole: true,

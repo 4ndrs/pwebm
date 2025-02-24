@@ -50,13 +50,14 @@ some considerations:
 - [x] parse quick actions with mocks and exit (status, kill, version, help)
 - [x] find a better way to exit, currently exiting with errors doesn't bode well when using quick actions
 - [x] throw error on unrecognized args
+- [x] parse subs flag
+- [x] parse encoder flag
+- [x] parse crf flag
+- [x] parse cpu-used flag
+- [x] parse deadline flag
+- [x] parse lavfi flag
+- [x] parse size limit flag
+- [x] parse extra params flag
+- [x] parse videos path flag (will be ignored if output is set)
+- [x] parse output file positional option
 - [ ] parse input flags (can be multiple, with either input or output seeking)
-- [ ] parse subs flag
-- [ ] parse crf flag
-- [ ] parse cpu-used flag
-- [ ] parse deadline flag
-- [ ] parse lavfi flag
-- [ ] parse size limit flag
-- [ ] parse extra params flag
-- [ ] parse videos path flag (will be ignored if output is set)
-- [ ] parse output file positional option
