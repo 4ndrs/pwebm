@@ -22,11 +22,7 @@ if (existsSync(configPath)) {
         "Error parsing the config file " + configPath + ":\n\n" + error.message,
       );
 
-      // this is a very roundabout way of exiting the cli, i don't like it at all
-      // but it's currently the only way i can exit without breaking the logger
-      // this won't show up on the console since handle exceptions is set to true in the file transport
-      // this is done in other parts of the cli as well, e.g. in main.ts
-      throw new Error();
+      process.exit(1);
     }
 
     throw error;
@@ -47,7 +43,7 @@ if (!parsedConfig.success) {
     );
   }
 
-  throw new Error();
+  process.exit(1);
 }
 
 export const config = parsedConfig.data;

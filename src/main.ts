@@ -1,5 +1,5 @@
-import { parseArgs } from "./args";
 import { logger } from "./logger";
+import { parseArgs } from "./args";
 import { FFProbeSchema } from "./schema/ffprobe";
 
 const args = Bun.argv.slice(2);
@@ -17,7 +17,7 @@ if (args[0] === "-i" && args[1] !== undefined) {
 
   console.info("Usage: pwebm -i <input>");
 
-  throw new Error();
+  process.exit(1);
 }
 
 const ffprobeProcess = Bun.spawnSync([
@@ -34,7 +34,7 @@ const ffprobeProcess = Bun.spawnSync([
 if (!ffprobeProcess.success) {
   logger.error("Error reading the file");
 
-  throw new Error();
+  process.exit(1);
 }
 
 const parsedOutput = FFProbeSchema.safeParse(
@@ -46,7 +46,7 @@ if (!parsedOutput.success) {
 
   logger.error(parsedOutput.error.errors);
 
-  throw new Error();
+  process.exit(1);
 }
 
 console.log(parsedOutput.data);

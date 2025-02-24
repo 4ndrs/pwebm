@@ -48,6 +48,7 @@ some considerations:
 
 ## 2025-02-24
 - [x] parse quick actions with mocks and exit (status, kill, version, help)
+- [x] find a better way to exit, currently exiting with errors doesn't bode well when using quick actions
 - [ ] throw error on unrecognized args
 - [ ] parse input flags (can be multiple, with either input or output seeking)
 - [ ] parse subs flag
