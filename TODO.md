@@ -27,7 +27,7 @@ some considerations:
 
 - [x] argument parser
 - [x] expand tilde and $HOME in config video path
-- [ ] check for ffmpeg and ffprobe in path
+- [x] check for ffmpeg and ffprobe in path
 - [ ] convert webm, retry when limit reached
 - [ ] convert any other encoder to mkv copied streams just like purewebm
 - [ ] ffmpeg progress
