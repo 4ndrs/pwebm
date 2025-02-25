@@ -4,15 +4,20 @@ import { ConfigSchema } from "./config";
 
 export const ArgsSchema = ConfigSchema.merge(
   z.object({
-    output: z.string().optional(),
     inputs: z.array(
       z.object({
         file: z.string(),
         stopTime: z.string().optional(),
         startTime: z.string().optional(),
-        seeking: z.union([z.literal("input"), z.literal("output")]),
       }),
     ),
+    output: z
+      .object({
+        file: z.string().optional(),
+        stopTime: z.string().optional(),
+        startTime: z.string().optional(),
+      })
+      .optional(),
     lavfi: z.string().optional(),
     extraParams: z.array(z.string()).optional(),
     // the next ones come from the config schema

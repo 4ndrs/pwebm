@@ -12,6 +12,7 @@ let videoPath: string;
 switch (os.platform()) {
   case "darwin":
     videoPath = path.join(home, "Movies", CLI_NAME);
+    break;
   case "win32":
   case "linux":
   default:

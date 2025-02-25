@@ -8,45 +8,36 @@ logger.info("argv: " + args.join(" "));
 
 const parsedArgs = parseArgs(args);
 
-let inputFile: string;
+console.log("parsedArgs:", parsedArgs);
 
-if (args[0] === "-i" && args[1] !== undefined) {
-  inputFile = args[1];
-} else {
-  logger.error("Input file is required");
+parsedArgs.inputs.forEach((input) => {
+  const ffprobeProcess = Bun.spawnSync([
+    "ffprobe",
+    "-v",
+    "error",
+    "-show_format",
+    "-show_streams",
+    "-print_format",
+    "json",
+    input.file,
+  ]);
 
-  logger.info("Usage: pwebm -i <input>", { onlyConsole: true });
+  if (!ffprobeProcess.success) {
+    logger.error("Error reading the file " + input.file);
 
-  process.exit(1);
-}
+    process.exit(1);
+  }
+  const parsedOutput = FFProbeSchema.safeParse(
+    JSON.parse(ffprobeProcess.stdout.toString()),
+  );
 
-const ffprobeProcess = Bun.spawnSync([
-  "ffprobe",
-  "-v",
-  "error",
-  "-show_format",
-  "-show_streams",
-  "-print_format",
-  "json",
-  inputFile,
-]);
+  if (!parsedOutput.success) {
+    logger.error("Error parsing the output from ffprobe");
 
-if (!ffprobeProcess.success) {
-  logger.error("Error reading the file");
+    logger.error(parsedOutput.error.errors);
 
-  process.exit(1);
-}
+    process.exit(1);
+  }
 
-const parsedOutput = FFProbeSchema.safeParse(
-  JSON.parse(ffprobeProcess.stdout.toString()),
-);
-
-if (!parsedOutput.success) {
-  logger.error("Error parsing the output from ffprobe");
-
-  logger.error(parsedOutput.error.errors);
-
-  process.exit(1);
-}
-
-logger.info(parsedOutput.data, { onlyConsole: true });
+  logger.info(parsedOutput.data, { onlyConsole: true });
+});

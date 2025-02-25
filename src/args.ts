@@ -49,6 +49,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
   let skip = false;
   let isExtraParam = false;
+  let seeking: { startTime?: string; stopTime?: string } | undefined;
 
   const skipNext = () => (skip = true);
 
@@ -96,17 +97,57 @@ export const parseArgs = (args: string[]): ArgsSchema => {
     }
 
     if (!arg.startsWith("-") && !arg.startsWith("--")) {
-      if (rawArgs.output) {
+      if (rawArgs.output?.file) {
         logger.error("Only one output file is allowed");
 
         logger.debug(
-          `Current output file: ${rawArgs.output}, new file: ${arg}`,
+          `Current output file: ${rawArgs.output.file}, new file: ${arg}`,
         );
 
         process.exit(1);
       }
 
-      rawArgs.output = arg;
+      if (!rawArgs.output) {
+        rawArgs.output = {};
+      }
+
+      rawArgs.output.file = arg;
+
+      return;
+    }
+
+    if (arg === "-ss") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      if (!seeking) {
+        seeking = {};
+      }
+
+      seeking.startTime = args[index + 1];
+
+      skipNext();
+
+      return;
+    }
+
+    if (arg === "-to") {
+      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
+        logMissingArg(arg);
+
+        process.exit(1);
+      }
+
+      if (!seeking) {
+        seeking = {};
+      }
+
+      seeking.stopTime = args[index + 1];
+
+      skipNext();
 
       return;
     }
@@ -117,6 +158,17 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
         process.exit(1);
       }
+
+      if (!rawArgs.inputs) {
+        rawArgs.inputs = [];
+      }
+
+      rawArgs.inputs.push({
+        file: args[index + 1],
+        ...seeking,
+      });
+
+      seeking = undefined;
 
       skipNext();
 
@@ -282,7 +334,25 @@ export const parseArgs = (args: string[]): ArgsSchema => {
     }
   });
 
-  console.log("rawArgs", rawArgs);
+  if (seeking) {
+    rawArgs.output = { ...rawArgs.output, ...seeking };
+
+    seeking = undefined;
+  }
+
+  const parsedArgs = ArgsSchema.safeParse(rawArgs);
+
+  if (!parsedArgs.success) {
+    logger.error("Error parsing the arguments");
+
+    logger.error(
+      JSON.stringify(parsedArgs.error.flatten().fieldErrors, null, 2),
+    );
+
+    process.exit(1);
+  }
+
+  return parsedArgs.data;
 };
 
 const logMissingArg = (arg: string) =>
