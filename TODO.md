@@ -26,7 +26,8 @@ some considerations:
 ## Stuff
 
 - [x] argument parser
-- [ ] expand tilde and $HOME in config video path
+- [x] expand tilde and $HOME in config video path
+- [ ] check for ffmpeg and ffprobe in path
 - [ ] convert webm, retry when limit reached
 - [ ] convert any other encoder to mkv copied streams just like purewebm
 - [ ] ffmpeg progress
@@ -46,21 +47,3 @@ some considerations:
 - [ ] redo conversions in logger view
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
-
-## 2025-02-25
-- [x] parse quick actions with mocks and exit (status, kill, version, help)
-- [x] find a better way to exit, currently exiting with errors doesn't bode well when using quick actions
-- [x] throw error on unrecognized args
-- [x] parse subs flag
-- [x] parse encoder flag
-- [x] parse crf flag
-- [x] parse cpu-used flag
-- [x] parse deadline flag
-- [x] parse lavfi flag
-- [x] parse size limit flag
-- [x] parse extra params flag
-- [x] parse videos path flag (will be ignored if output is set)
-- [x] parse output file positional option
-- [x] parse -ss input/output seeking
-- [x] parse -to input/output seeking
-- [x] parse multiple input flags
