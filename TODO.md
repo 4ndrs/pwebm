@@ -31,6 +31,8 @@ some considerations:
 - [ ] convert webm, retry when limit reached
 - [ ] convert any other encoder to mkv copied streams just like purewebm
 - [ ] ffmpeg progress
+- [ ] handle signals
+- [ ] name the process
 - [ ] socket file for communication
 - [ ] kill implementation
 - [ ] status implementation
@@ -47,3 +49,14 @@ some considerations:
 - [ ] redo conversions in logger view
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
+
+## 2025-02-25
+- [ ] add ffmpeg utils
+- [ ] handle first ffmpeg webm encoding
+- [ ] encode
+- [ ] kill
+- [ ] add event listeners (on close, on status update)
+- [ ] rename pass file
+- [ ] clean up pass file after encoding/termination
+- [ ] retry webm conversion if limit reached and encoding not done yet
+- [ ] retry webm conversion if limit reached when encoding is done

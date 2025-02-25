@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { ffmpeg } from "./ffmpeg";
 import { parseArgs } from "./args";
 import { FFProbeSchema } from "./schema/ffprobe";
 
@@ -70,3 +71,5 @@ parsedArgs.inputs.forEach((input) => {
 
   logger.info(parsedOutput.data, { onlyConsole: true });
 });
+
+ffmpeg.encode(parsedArgs);
