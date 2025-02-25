@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_VIDEO_PATH } from "../paths";
-
-import os from "os";
+import { DEFAULT_VIDEO_PATH, expandHome } from "../paths";
 
 export const ConfigSchema = z.object({
   subs: z.boolean().default(false),
@@ -19,22 +17,7 @@ export const ConfigSchema = z.object({
     ])
     .default(0),
   deadline: z.enum(["good", "best"]).default("good"),
-  videoPath: z
-    .string()
-    .default(DEFAULT_VIDEO_PATH)
-    .transform((value) => {
-      const home = os.homedir();
-
-      if (value.startsWith("~")) {
-        return value.replace("~", home);
-      }
-
-      if (value.startsWith("$HOME")) {
-        return value.replace("$HOME", home);
-      }
-
-      return value;
-    }),
+  videoPath: z.string().default(DEFAULT_VIDEO_PATH).transform(expandHome),
 });
 
 export type ConfigSchema = z.infer<typeof ConfigSchema>;

@@ -19,5 +19,17 @@ switch (os.platform()) {
     videoPath = path.join(home, "Videos", CLI_NAME);
 }
 
+export const expandHome = <T extends string | undefined>(value: T) => {
+  if (value?.startsWith("~")) {
+    return value.replace("~", home);
+  }
+
+  if (value?.startsWith("$HOME")) {
+    return value.replace("$HOME", home);
+  }
+
+  return value;
+};
+
 export const CONFIG_PATH = configPath;
 export const DEFAULT_VIDEO_PATH = videoPath;

@@ -1,19 +1,20 @@
 import { z } from "zod";
 import { config } from "../config";
+import { expandHome } from "../paths";
 import { ConfigSchema } from "./config";
 
 export const ArgsSchema = ConfigSchema.merge(
   z.object({
     inputs: z.array(
       z.object({
-        file: z.string(),
+        file: z.string().transform(expandHome),
         stopTime: z.string().optional(),
         startTime: z.string().optional(),
       }),
     ),
     output: z
       .object({
-        file: z.string().optional(),
+        file: z.string().optional().transform(expandHome),
         stopTime: z.string().optional(),
         startTime: z.string().optional(),
       })
