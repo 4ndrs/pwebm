@@ -41,6 +41,7 @@ some considerations:
 - [ ] add automatic releases with github actions (edge + tagged)
 - [ ] add bun bundled executable package releases to the automatic releases
 - [ ] update readme
+- [ ] add subs flag warning to the readme (how it works, output seeking needed, etc)
 - [ ] release tagged versions in npm
 - [ ] it's not part of this repo, but don't forget to improve the helper script for PureMPV (pwebm-helper), it has a missing readme
 
@@ -51,12 +52,15 @@ some considerations:
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
 ## 2025-02-25
-- [ ] add ffmpeg utils
-- [ ] handle first ffmpeg webm encoding
-- [ ] encode
-- [ ] kill
-- [ ] add event listeners (on close, on status update)
+- [x] add ffmpeg utils
+- [x] handle first ffmpeg webm encoding
+- [x] use unix timestamp for filename when no output file
+- [ ] out time can be N/A
+- [ ] two pass
 - [ ] rename pass file
 - [ ] clean up pass file after encoding/termination
+- [x] encode
+- [x] kill
+- [ ] add event listeners (on close, on status update)
 - [ ] retry webm conversion if limit reached and encoding not done yet
 - [ ] retry webm conversion if limit reached when encoding is done

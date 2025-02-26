@@ -41,9 +41,17 @@ const Attachment = Stream.merge(
   }),
 );
 
+const Data = Stream.merge(
+  z.object({
+    codec_type: z.literal("data"),
+    codec_name: Stream.shape.codec_name.optional(),
+    codec_long_name: Stream.shape.codec_long_name.optional(),
+  }),
+);
+
 export const FFProbeSchema = z.object({
   format: Format,
-  streams: z.array(z.union([Video, Audio, Subtitle, Attachment])),
+  streams: z.array(z.union([Video, Audio, Subtitle, Attachment, Data])),
 });
 
 export type FFProbeSchema = z.infer<typeof FFProbeSchema>;
