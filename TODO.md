@@ -30,6 +30,7 @@ some considerations:
 - [x] check for ffmpeg and ffprobe in path
 - [ ] convert webm, retry when limit reached
 - [ ] convert any other encoder to mkv copied streams just like purewebm
+- [ ] handle queue
 - [ ] ffmpeg progress
 - [ ] handle signals
 - [ ] name the process
@@ -51,16 +52,15 @@ some considerations:
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
-## 2025-02-25
+## 2025-02-27
 - [x] add ffmpeg utils
 - [x] handle first ffmpeg webm encoding
 - [x] use unix timestamp for filename when no output file
-- [ ] out time can be N/A
-- [ ] two pass
-- [ ] rename pass file
-- [ ] clean up pass file after encoding/termination
+- [x] out time can be N/A
+- [x] two pass
+- [x] rename pass file
+- [x] clean up pass file after encoding/termination
 - [x] encode
 - [x] kill
-- [ ] add event listeners (on close, on status update)
 - [ ] retry webm conversion if limit reached and encoding not done yet
 - [ ] retry webm conversion if limit reached when encoding is done

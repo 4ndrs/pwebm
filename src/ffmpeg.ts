@@ -1,16 +1,18 @@
 import { logger } from "./logger";
+import { CLI_NAME } from "./constants";
+import { unlinkSync } from "fs";
 import { ArgsSchema } from "./schema/args";
 import { ProgressSchema } from "./schema/ffmpeg";
+import { TEMP_PATH, NULL_DEVICE_PATH } from "./paths";
 
 import path from "path";
 
-type Event = "close" | "status";
-type Subprocess = ReturnType<typeof encode>;
+type Subprocess = Awaited<ReturnType<typeof encode>>;
 
 let stderr = "";
 let ffmpegProcess: Subprocess | undefined;
 
-const encode = (args: ArgsSchema) => {
+const encode = async (args: ArgsSchema) => {
   const outFile =
     args.output?.file ||
     path.join(args.videoPath, generateRandomFilename() + ".webm");
@@ -75,31 +77,81 @@ const encode = (args: ArgsSchema) => {
     ...lavfi,
     "-b:v",
     "0",
-    ...noAudio,
     "-row-mt",
     "1",
     "-map_metadata",
     "-1",
     "-map_chapters",
     "-1",
+  ];
+
+  const passLogFile = path.join(TEMP_PATH, CLI_NAME + "2pass");
+
+  const firstPassCmd = [
+    ...cmd,
+    "-an", // first pass doesn't need audio
+    "-f",
+    "null",
+    "-pass",
+    "1",
+    "-passlogfile",
+    passLogFile,
+    ...extraParams,
+    NULL_DEVICE_PATH,
+    "-y",
+  ];
+
+  const secondPassCmd = [
+    ...cmd,
+    ...noAudio,
     "-f",
     "webm",
+    "-pass",
+    "2",
+    "-passlogfile",
+    passLogFile,
     ...extraParams,
     outFile,
     "-y",
   ];
 
-  logger.info("Executing: " + cmd.join(" "));
+  logger.info("Processing the first pass");
 
-  const process = Bun.spawn({ cmd, stderr: "pipe" });
+  logger.info("Executing: " + firstPassCmd.join(" "));
 
-  ffmpegProcess = process;
+  const firstPassProcess = Bun.spawn({ cmd: firstPassCmd, stderr: "pipe" });
 
-  processStdout(process);
-  processStderr(process);
-  processTermination(process);
+  ffmpegProcess = firstPassProcess;
 
-  return process;
+  //processStdout(firstPassProcess); // no progress data on first pass, all N/A
+  processStderr(firstPassProcess);
+
+  await processTermination(firstPassProcess);
+
+  if (firstPassProcess.exitCode !== 0) {
+    logger.error("Couldn't process first pass");
+
+    removePassLogFile(passLogFile);
+
+    process.exit(1);
+  }
+
+  logger.info("Processing the second pass");
+
+  logger.info("Executing: " + secondPassCmd.join(" "));
+
+  const secondPassProcess = Bun.spawn({ cmd: secondPassCmd, stderr: "pipe" });
+
+  ffmpegProcess = secondPassProcess;
+
+  processStdout(secondPassProcess);
+  processStderr(secondPassProcess);
+
+  await processTermination(secondPassProcess);
+
+  removePassLogFile(passLogFile);
+
+  return secondPassProcess;
 };
 
 const processStderr = async (process: Subprocess) => {
@@ -127,14 +179,7 @@ const processStdout = async (process: Subprocess) => {
     const parsedProgress = ProgressSchema.safeParse(data);
 
     if (!parsedProgress.success) {
-      logger.error(
-        "Error parsing progress data: " + JSON.stringify(data, null, 2),
-      );
-
-      logger.error(
-        JSON.stringify(parsedProgress.error.flatten().fieldErrors, null, 2),
-      );
-
+      // values can be N/A, skip them to keep showing the previous values
       continue;
     }
 
@@ -145,16 +190,28 @@ const processStdout = async (process: Subprocess) => {
 const processTermination = async (process: Subprocess) => {
   await process.exited;
 
-  console.log("exited with code:", process.exitCode);
-
   if (process.exitCode !== 0) {
-    console.error(stderr);
+    logger.error("ffmpeg exited with code: " + process.exitCode);
+    logger.error(stderr);
   }
 };
 
 const kill = () => ffmpegProcess?.kill();
-const addEventListener = (event: Event, callback: () => void) => {
-  // TODO
+
+const removePassLogFile = (file: string) => {
+  file = file + "-0.log";
+
+  try {
+    logger.info(`Deleting the ${file} file`);
+
+    unlinkSync(file);
+  } catch (error) {
+    logger.error("Couldn't delete pass log file: " + file);
+
+    if (error instanceof Error) {
+      logger.error(error.message);
+    }
+  }
 };
 
 const generateRandomFilename = () =>
@@ -177,8 +234,4 @@ const escapeSpecialCharacters = (value: string) =>
     // Comma
     .replace(/,/g, "\\,");
 
-export const ffmpeg = {
-  kill,
-  encode,
-  addEventListener,
-};
+export const ffmpeg = { kill, encode };
