@@ -13,6 +13,8 @@ let stderr = "";
 let ffmpegProcess: Subprocess | undefined;
 
 const encode = async (args: ArgsSchema) => {
+  const duration = deduceDuration(args);
+
   const outFile =
     args.output?.file ||
     path.join(args.videoPath, generateRandomFilename() + ".webm");
@@ -115,6 +117,8 @@ const encode = async (args: ArgsSchema) => {
     "-y",
   ];
 
+  const limitInBytes = args.sizeLimit * 1024 ** 2; // convert from MiB to bytes
+
   logger.info("Processing the first pass");
 
   logger.info("Executing: " + firstPassCmd.join(" "));
@@ -144,7 +148,14 @@ const encode = async (args: ArgsSchema) => {
 
   ffmpegProcess = secondPassProcess;
 
-  processStdout(secondPassProcess);
+  processStdout(secondPassProcess, (progress) => {
+    if (progress.totalSize > limitInBytes) {
+      logger.error(`Output file exceeds the size limit`);
+
+      secondPassProcess.kill();
+    }
+  });
+
   processStderr(secondPassProcess);
 
   await processTermination(secondPassProcess);
@@ -160,7 +171,10 @@ const processStderr = async (process: Subprocess) => {
   }
 };
 
-const processStdout = async (process: Subprocess) => {
+const processStdout = async (
+  process: Subprocess,
+  onProgress?: (progress: ProgressSchema) => void,
+) => {
   for await (const chunk of process.stdout) {
     const text = new TextDecoder().decode(chunk);
 
@@ -183,6 +197,7 @@ const processStdout = async (process: Subprocess) => {
       continue;
     }
 
+    onProgress?.(parsedProgress.data);
     console.log("progress:", parsedProgress.data);
   }
 };
@@ -220,6 +235,18 @@ const generateRandomFilename = () =>
     .toString()
     .padStart(3, "0");
 
+const getSeconds = (timestamp: string) => {
+  const parts = timestamp.split(":").map(Number);
+
+  let seconds = 0;
+
+  while (parts.length) {
+    seconds = seconds * 60 + (parts.shift() || 0);
+  }
+
+  return Number(seconds.toFixed(3));
+};
+
 const escapeSpecialCharacters = (value: string) =>
   value
     // Square brackets
@@ -233,5 +260,32 @@ const escapeSpecialCharacters = (value: string) =>
     .replace(/:/g, "\\\\:")
     // Comma
     .replace(/,/g, "\\,");
+
+const deduceDuration = (args: ArgsSchema) => {
+  // if output seeking stop time is set with no output start time, the duration will be
+  // the stop time
+  if (args.output?.stopTime && !args.output?.startTime) {
+    return getSeconds(args.output.stopTime);
+  } else if (args.output?.startTime && args.output?.stopTime) {
+    // if both output seeking start and stop times are set, let's remove the start time
+    // from the stop time
+    return getSeconds(args.output.stopTime) - getSeconds(args.output.startTime);
+  }
+
+  const startTimes = args.inputs
+    .filter((input) => !!input.startTime)
+    .map((input) => getSeconds(input.startTime as string));
+
+  const stopTimes = args.inputs
+    .filter((input) => !!input.stopTime)
+    .map((input) => getSeconds(input.stopTime as string));
+
+  const start = startTimes.reduce((acc, time) => acc + Number(time), 0);
+  const stop = stopTimes.reduce((acc, time) => acc + Number(time), 0);
+
+  return stop - start;
+};
+
+const getInputsMetadata = (args: ArgsSchema) => {};
 
 export const ffmpeg = { kill, encode };

@@ -17,3 +17,5 @@ export const ProgressSchema = z
     progress: data.progress,
     totalSize: data.total_size, // bytes
   }));
+
+export type ProgressSchema = z.infer<typeof ProgressSchema>;

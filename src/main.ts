@@ -57,6 +57,7 @@ parsedArgs.inputs.forEach((input) => {
 
     process.exit(1);
   }
+
   const parsedOutput = FFProbeSchema.safeParse(
     JSON.parse(ffprobeProcess.stdout.toString()),
   );

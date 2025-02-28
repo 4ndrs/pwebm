@@ -52,7 +52,7 @@ some considerations:
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
-## 2025-02-27
+## 2025-02-28
 - [x] add ffmpeg utils
 - [x] handle first ffmpeg webm encoding
 - [x] use unix timestamp for filename when no output file
@@ -62,5 +62,9 @@ some considerations:
 - [x] clean up pass file after encoding/termination
 - [x] encode
 - [x] kill
+- [x] handle size limits hits with a callback in the stdout processing
+- [x] convert timestamps to seconds
+- [ ] parse metadata for multiple inputs with a single schema
+- [ ] deduce duration
 - [ ] retry webm conversion if limit reached and encoding not done yet
 - [ ] retry webm conversion if limit reached when encoding is done
