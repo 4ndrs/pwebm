@@ -8,6 +8,7 @@ import {
   COPYRIGHT_YEAR,
 } from "./constants";
 
+import { ipc } from "./ipc";
 import { config } from "./config";
 import { logger } from "./logger";
 import { ArgsSchema } from "./schema/args";
@@ -35,7 +36,7 @@ const RECOGNIZED_ARGS = [
   "--video-path",
 ];
 
-export const parseArgs = (args: string[]): ArgsSchema => {
+export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
   if (args.length === 0) {
     printUsage();
 
@@ -53,15 +54,17 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
   const skipNext = () => (skip = true);
 
-  args.forEach((arg, index) => {
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+
     if (skip) {
       skip = false;
-      return;
+      continue;
     }
 
     if (isExtraParam) {
       rawArgs.extraParams?.push(arg);
-      return;
+      continue;
     }
 
     if (arg.startsWith("-") && !RECOGNIZED_ARGS.includes(arg)) {
@@ -88,6 +91,9 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
     if (arg === "-kill") {
       logger.info("Requested kill", { onlyConsole: true });
+
+      await ipc.sendKill();
+
       process.exit();
     }
 
@@ -113,7 +119,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       rawArgs.output.file = arg;
 
-      return;
+      continue;
     }
 
     if (arg === "-ss") {
@@ -131,7 +137,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-to") {
@@ -149,7 +155,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-i") {
@@ -172,13 +178,13 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-subs") {
       rawArgs.subs = true;
 
-      return;
+      continue;
     }
 
     if (arg === "-sl" || arg === "--size-limit") {
@@ -200,7 +206,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-ep" || arg === "--extra-params") {
@@ -214,7 +220,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       rawArgs.extraParams = [];
 
-      return;
+      continue;
     }
 
     if (arg === "--video-path") {
@@ -228,7 +234,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-crf") {
@@ -250,7 +256,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-cpu-used") {
@@ -280,7 +286,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-deadline") {
@@ -302,7 +308,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-c:v") {
@@ -316,7 +322,7 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
 
     if (arg === "-lavfi") {
@@ -330,9 +336,9 @@ export const parseArgs = (args: string[]): ArgsSchema => {
 
       skipNext();
 
-      return;
+      continue;
     }
-  });
+  }
 
   if (seeking) {
     rawArgs.output = { ...rawArgs.output, ...seeking };

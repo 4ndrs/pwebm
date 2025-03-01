@@ -156,4 +156,5 @@ export const ipc = {
   sendMessage,
   stopListener,
   startListener,
+  sendKill: () => sendMessage({ type: "kill" }),
 };
