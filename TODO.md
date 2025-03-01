@@ -53,3 +53,8 @@ some considerations:
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
 ## 2025-03-01
+[ ] add unix socket communication (ipc)
+[x] ipc listener
+[ ] message sending
+[ ] add queue system
+[ ] send args through the ipc + add to queue
