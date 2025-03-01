@@ -2,12 +2,14 @@ import { logger } from "./logger";
 import { CLI_NAME } from "./constants";
 import { unlinkSync } from "fs";
 import { ArgsSchema } from "./schema/args";
+import { FFProbeSchema } from "./schema/ffprobe";
 import { ProgressSchema } from "./schema/ffmpeg";
+import { Subprocess as _Subprocess } from "bun";
 import { TEMP_PATH, NULL_DEVICE_PATH } from "./paths";
 
 import path from "path";
 
-type Subprocess = Awaited<ReturnType<typeof encode>>;
+type Subprocess = _Subprocess<"ignore", "pipe", "pipe">;
 
 let stderr = "";
 let ffmpegProcess: Subprocess | undefined;
@@ -117,52 +119,105 @@ const encode = async (args: ArgsSchema) => {
     "-y",
   ];
 
+  // first try tries to encode with just the crf value (constant quality mode
+  // triggered by b:v 0), subsequent tries will try to encode with bitrate calculation
+  // bitrate = size limit / duration * 8
+  // with the exceeding percentage removed in the following tries with a minimum of 0.02%
+
+  let failed: boolean;
+  let bitrate = 0;
+  let triesCount = 1;
+
   const limitInBytes = args.sizeLimit * 1024 ** 2; // convert from MiB to bytes
 
-  logger.info("Processing the first pass");
+  do {
+    failed = false;
 
-  logger.info("Executing: " + firstPassCmd.join(" "));
+    logger.info(
+      "Processing the first pass" +
+        (triesCount > 1 ? ` (try ${triesCount})` : ""),
+    );
 
-  const firstPassProcess = Bun.spawn({ cmd: firstPassCmd, stderr: "pipe" });
+    logger.info("Executing: " + firstPassCmd.join(" "));
 
-  ffmpegProcess = firstPassProcess;
+    const firstPassProcess = Bun.spawn({ cmd: firstPassCmd, stderr: "pipe" });
 
-  //processStdout(firstPassProcess); // no progress data on first pass, all N/A
-  processStderr(firstPassProcess);
+    ffmpegProcess = firstPassProcess;
 
-  await processTermination(firstPassProcess);
+    processStderr(firstPassProcess);
 
-  if (firstPassProcess.exitCode !== 0) {
-    logger.error("Couldn't process first pass");
+    await firstPassProcess.exited;
 
-    removePassLogFile(passLogFile);
+    if (firstPassProcess.exitCode !== 0) {
+      logger.error("Couldn't process first pass");
 
-    process.exit(1);
-  }
+      removePassLogFile(passLogFile);
 
-  logger.info("Processing the second pass");
-
-  logger.info("Executing: " + secondPassCmd.join(" "));
-
-  const secondPassProcess = Bun.spawn({ cmd: secondPassCmd, stderr: "pipe" });
-
-  ffmpegProcess = secondPassProcess;
-
-  processStdout(secondPassProcess, (progress) => {
-    if (progress.totalSize > limitInBytes) {
-      logger.error(`Output file exceeds the size limit`);
-
-      secondPassProcess.kill();
+      process.exit(1);
     }
-  });
 
-  processStderr(secondPassProcess);
+    logger.info(
+      "Processing the second pass" +
+        (triesCount > 1 ? ` (try ${triesCount})` : ""),
+    );
 
-  await processTermination(secondPassProcess);
+    logger.info("Executing: " + secondPassCmd.join(" "));
+
+    const secondPassProcess = Bun.spawn({ cmd: secondPassCmd, stderr: "pipe" });
+
+    ffmpegProcess = secondPassProcess;
+
+    processStdout(secondPassProcess, (progress) => {
+      if (limitInBytes === 0 || failed || progress.totalSize <= limitInBytes) {
+        return;
+      }
+
+      failed = true;
+
+      const offsetPercentage = Number(
+        (((progress.totalSize - limitInBytes) / limitInBytes) * 100).toFixed(3),
+      );
+
+      logger.warn(
+        `File size is greater than the limit by ${offsetPercentage}% with ${triesCount === 1 ? "crf " + args.crf : "bitrate " + (bitrate / 1000).toFixed(2) + "K"}`,
+      );
+
+      if (triesCount === 1) {
+        bitrate = Math.floor((limitInBytes / duration) * 8);
+
+        // set the crf to 10 for a targeted bitrate next
+        firstPassCmd[firstPassCmd.lastIndexOf("-crf") + 1] = "10";
+        secondPassCmd[secondPassCmd.lastIndexOf("-crf") + 1] = "10";
+      } else {
+        const percent = offsetPercentage < 0.02 ? 0.02 : offsetPercentage;
+
+        bitrate -= Math.floor((percent / 100) * bitrate);
+      }
+
+      // replace the b:v 0 with the calculated bitrate
+      firstPassCmd[firstPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
+      secondPassCmd[secondPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
+
+      logger.warn(`Retrying with bitrate ${bitrate / 1000}K`);
+
+      triesCount++;
+
+      secondPassProcess.kill("SIGKILL");
+    });
+
+    processStderr(secondPassProcess);
+
+    await secondPassProcess.exited;
+  } while (failed);
 
   removePassLogFile(passLogFile);
 
-  return secondPassProcess;
+  if (ffmpegProcess.exitCode !== 0) {
+    logger.error("ffmpeg exited with code: " + ffmpegProcess.exitCode);
+    logger.error(stderr);
+
+    process.exit(1);
+  }
 };
 
 const processStderr = async (process: Subprocess) => {
@@ -199,15 +254,6 @@ const processStdout = async (
 
     onProgress?.(parsedProgress.data);
     console.log("progress:", parsedProgress.data);
-  }
-};
-
-const processTermination = async (process: Subprocess) => {
-  await process.exited;
-
-  if (process.exitCode !== 0) {
-    logger.error("ffmpeg exited with code: " + process.exitCode);
-    logger.error(stderr);
   }
 };
 
@@ -262,30 +308,114 @@ const escapeSpecialCharacters = (value: string) =>
     .replace(/,/g, "\\,");
 
 const deduceDuration = (args: ArgsSchema) => {
-  // if output seeking stop time is set with no output start time, the duration will be
-  // the stop time
+  // if output seeking stop time is set with no output start time, the
+  // duration will be the stop time
   if (args.output?.stopTime && !args.output?.startTime) {
     return getSeconds(args.output.stopTime);
   } else if (args.output?.startTime && args.output?.stopTime) {
-    // if both output seeking start and stop times are set, let's remove the start time
-    // from the stop time
+    // if both output seeking start and stop times are set, let's remove
+    // the start time from the stop time
     return getSeconds(args.output.stopTime) - getSeconds(args.output.startTime);
   }
 
-  const startTimes = args.inputs
-    .filter((input) => !!input.startTime)
-    .map((input) => getSeconds(input.startTime as string));
+  const { data: metadata, error } = getInputMetadata(args.inputs);
 
-  const stopTimes = args.inputs
-    .filter((input) => !!input.stopTime)
-    .map((input) => getSeconds(input.stopTime as string));
+  if (error) {
+    logger.error("Error reading the input metadata");
+    logger.error(error.message);
 
-  const start = startTimes.reduce((acc, time) => acc + Number(time), 0);
-  const stop = stopTimes.reduce((acc, time) => acc + Number(time), 0);
+    process.exit(1);
+  }
 
-  return stop - start;
+  // the following is a very simplistic approach to deduce the duration
+  // but should work for most cases
+
+  // the duration is only used for bitrate calculation for size limited
+  // webms and the percentage that is shown during the encoding process
+
+  // no output seeking, let's just pick the longest input if no lavfi concat
+  // with the input seeking times or duration of the input metadata
+  if (!args.lavfi?.includes("concat")) {
+    const durations = getInputDurations(args.inputs, metadata);
+
+    return Math.max(...durations);
+  }
+
+  // if lavfi concat is used, let's sum the durations of the inputs
+  const durations = getInputDurations(args.inputs, metadata);
+
+  return durations.reduce((acc, curr) => acc + curr, 0);
 };
 
-const getInputsMetadata = (args: ArgsSchema) => {};
+const getInputDurations = (
+  inputs: ArgsSchema["inputs"],
+  metadata: FFProbeSchema[],
+) =>
+  metadata.map((input, index) => {
+    if (inputs[index].startTime && inputs[index].stopTime) {
+      return (
+        getSeconds(inputs[index].stopTime) - getSeconds(inputs[index].startTime)
+      );
+    }
+
+    if (inputs[index].startTime) {
+      return input.format.duration - getSeconds(inputs[index].startTime);
+    }
+
+    if (inputs[index].stopTime) {
+      return getSeconds(inputs[index].stopTime);
+    }
+
+    return input.format.duration;
+  });
+
+const getInputMetadata = (inputs: { file: string }[]) => {
+  const inputsMetadata: FFProbeSchema[] = [];
+
+  try {
+    inputs.forEach(({ file }) => {
+      const ffprobeProcess = Bun.spawnSync([
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_format",
+        "-show_streams",
+        "-print_format",
+        "json",
+        file,
+      ]);
+
+      if (!ffprobeProcess.success) {
+        throw new Error("Error reading the file " + file);
+      }
+
+      const parsedOutput = FFProbeSchema.safeParse(
+        JSON.parse(ffprobeProcess.stdout.toString()),
+      );
+
+      if (!parsedOutput.success) {
+        throw new Error(
+          "Error parsing the output from ffprobe: " +
+            JSON.stringify(parsedOutput.error.flatten().fieldErrors, null, 2),
+        );
+      }
+
+      inputsMetadata.push(parsedOutput.data);
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        data: null,
+        error,
+      };
+    }
+    throw error;
+  }
+
+  return {
+    error: null,
+    data: inputsMetadata,
+  };
+};
 
 export const ffmpeg = { kill, encode };
