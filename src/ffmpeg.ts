@@ -15,12 +15,6 @@ let stderr = "";
 let ffmpegProcess: Subprocess | undefined;
 
 const encode = async (args: ArgsSchema) => {
-  const duration = deduceDuration(args);
-
-  const outFile =
-    args.output?.file ||
-    path.join(args.videoPath, generateRandomFilename() + ".webm");
-
   const inputs = args.inputs.flatMap((input) => {
     const result = [];
 
@@ -49,6 +43,82 @@ const encode = async (args: ArgsSchema) => {
 
   const lavfi = args.lavfi ? ["-lavfi", args.lavfi] : [];
   const extraParams = args.extraParams || [];
+
+  const encoder = args.extraParams?.includes("-c:v")
+    ? args.extraParams[args.extraParams.lastIndexOf("-c:v") + 1]
+    : args.encoder;
+
+  const isWebmEncoder = encoder.includes("libvpx");
+
+  const outFile =
+    args.output?.file ||
+    path.join(
+      args.videoPath,
+      generateRandomFilename() + (isWebmEncoder ? ".webm" : ".mkv"),
+    );
+
+  if (!isWebmEncoder) {
+    // if the encoder is not for webms (libvpx/libvpx-vp9), let's just do a single pass with the copied streams
+    // the goal here is to copy everything (audio, subtitles, attachments, etc) as is, and encode the video stream
+    // with the crf value in constant quality mode, if map is used in extra params, we will drop our mappings
+    // this is an escape hatch for users that sometimes want to use other encoders like libx264 with copied streams (me)
+    const userMapping = !!args.extraParams?.includes("-map");
+
+    const mappings = userMapping
+      ? []
+      : args.inputs.flatMap((_, index) => ["-map", index.toString()]);
+
+    const cmd = [
+      "ffmpeg",
+      "-hide_banner",
+      "-progress",
+      "pipe:1",
+      ...inputs,
+      ...outputSeeking,
+      ...mappings,
+      "-c",
+      "copy",
+      "-c:v",
+      args.encoder,
+      "-crf",
+      args.crf.toString(),
+      ...lavfi,
+      "-b:v",
+      "0",
+      "-preset",
+      "veryslow", // veryslow is used here as the preset, can be changed with extra params which takes precedence
+      ...extraParams,
+      outFile,
+      "-y",
+    ];
+
+    logger.info("Processing the single pass");
+
+    logger.info("Executing: " + cmd.join(" "));
+
+    const singlePassProcess = Bun.spawn({ cmd, stderr: "pipe" });
+
+    ffmpegProcess = singlePassProcess;
+
+    processStdout(singlePassProcess);
+    processStderr(singlePassProcess);
+
+    await singlePassProcess.exited;
+
+    if (ffmpegProcess.exitCode !== 0) {
+      logger.error(
+        "Error processing the single pass, ffmpeg exited with code: " +
+          ffmpegProcess.exitCode,
+      );
+      logger.error(stderr);
+
+      process.exit(1);
+    }
+
+    return;
+  }
+
+  const duration = deduceDuration(args);
 
   // this is just for convenience to quick burn subtitles for single input streams
   // picks the first input file and burns its subtitles to the output stream
@@ -213,7 +283,11 @@ const encode = async (args: ArgsSchema) => {
   removePassLogFile(passLogFile);
 
   if (ffmpegProcess.exitCode !== 0) {
-    logger.error("ffmpeg exited with code: " + ffmpegProcess.exitCode);
+    logger.error(
+      "Error processing the second pass, ffmpeg exited with code: " +
+        ffmpegProcess.exitCode,
+    );
+
     logger.error(stderr);
 
     process.exit(1);

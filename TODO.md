@@ -28,8 +28,8 @@ some considerations:
 - [x] argument parser
 - [x] expand tilde and $HOME in config video path
 - [x] check for ffmpeg and ffprobe in path
-- [ ] convert webm, retry when limit reached
-- [ ] convert any other encoder to mkv copied streams just like purewebm
+- [x] convert webm, retry when limit reached
+- [x] convert any other encoder to mkv copied streams just like purewebm
 - [ ] handle queue
 - [ ] ffmpeg progress
 - [ ] handle signals
@@ -52,19 +52,4 @@ some considerations:
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
-## 2025-02-29
-- [x] add ffmpeg utils
-- [x] handle first ffmpeg webm encoding
-- [x] use unix timestamp for filename when no output file
-- [x] out time can be N/A
-- [x] two pass
-- [x] rename pass file
-- [x] clean up pass file after encoding/termination
-- [x] encode
-- [x] kill
-- [x] handle size limits hits with a callback in the stdout processing
-- [x] convert timestamps to seconds
-- [x] parse metadata for multiple inputs with a single schema
-- [x] deduce duration
-- [x] retry webm conversion if limit reached and encoding not done yet
-- [x] retry webm conversion if limit reached when encoding is done
+## 2025-03-01
