@@ -27,7 +27,7 @@ const startListener = () => {
   listener = Bun.listen({
     unix: SOCKET_FILE,
     socket: {
-      data: (socket, rawData) => {
+      data: async (socket, rawData) => {
         const parsedData = IPCSchema.safeParse(JSON.parse(rawData.toString()));
 
         if (!parsedData.success) {
@@ -42,7 +42,9 @@ const startListener = () => {
 
         switch (type) {
           case "kill":
-            logger.info("Received kill request through the socket");
+            logger.info("Received kill signal, aborting the queue");
+
+            await queue.abortProcessing();
 
             socket.end(
               JSON.stringify({

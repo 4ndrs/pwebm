@@ -12,6 +12,7 @@ import path from "path";
 type Subprocess = _Subprocess<"ignore", "pipe", "pipe">;
 
 let stderr = "";
+let forceKilled = false;
 let ffmpegProcess: Subprocess | undefined;
 
 const encode = async (args: ArgsSchema) => {
@@ -105,7 +106,7 @@ const encode = async (args: ArgsSchema) => {
 
     await singlePassProcess.exited;
 
-    if (ffmpegProcess.exitCode !== 0) {
+    if (ffmpegProcess.exitCode !== 0 && !forceKilled) {
       logger.error(
         "Error processing the single pass, ffmpeg exited with code: " +
           ffmpegProcess.exitCode,
@@ -113,6 +114,12 @@ const encode = async (args: ArgsSchema) => {
       logger.error(stderr);
 
       process.exit(1);
+    }
+
+    if (forceKilled) {
+      logger.warn("ffmpeg was killed");
+
+      return;
     }
 
     return;
@@ -218,12 +225,20 @@ const encode = async (args: ArgsSchema) => {
 
     await firstPassProcess.exited;
 
-    if (firstPassProcess.exitCode !== 0) {
+    if (firstPassProcess.exitCode !== 0 && !forceKilled) {
       logger.error("Couldn't process first pass");
 
       removePassLogFile(passLogFile);
 
       process.exit(1);
+    }
+
+    if (forceKilled) {
+      removePassLogFile(passLogFile);
+
+      logger.warn("ffmpeg was killed");
+
+      return;
     }
 
     logger.info(
@@ -282,7 +297,7 @@ const encode = async (args: ArgsSchema) => {
 
   removePassLogFile(passLogFile);
 
-  if (ffmpegProcess.exitCode !== 0) {
+  if (ffmpegProcess.exitCode !== 0 && !forceKilled) {
     logger.error(
       "Error processing the second pass, ffmpeg exited with code: " +
         ffmpegProcess.exitCode,
@@ -291,6 +306,10 @@ const encode = async (args: ArgsSchema) => {
     logger.error(stderr);
 
     process.exit(1);
+  }
+
+  if (forceKilled) {
+    logger.warn("ffmpeg was killed");
   }
 };
 
@@ -331,7 +350,16 @@ const processStdout = async (
   }
 };
 
-const kill = () => ffmpegProcess?.kill();
+const kill = () => {
+  if (!ffmpegProcess) {
+    return;
+  }
+
+  logger.info(`Killing ffmpeg (PID: ${ffmpegProcess.pid})`);
+
+  forceKilled = true;
+  ffmpegProcess.kill("SIGKILL");
+};
 
 const removePassLogFile = (file: string) => {
   file = file + "-0.log";
