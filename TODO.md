@@ -56,5 +56,6 @@ some considerations:
 [x] add unix socket communication (ipc)
 [x] ipc listener
 [x] message sending
-[ ] add queue system
+[x] add queue system
+[ ] detect if instance running and connected through ipc
 [ ] send args through the ipc + add to queue
