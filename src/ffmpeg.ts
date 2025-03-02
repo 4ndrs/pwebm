@@ -268,7 +268,7 @@ const encode = async (args: ArgsSchema) => {
       firstPassCmd[firstPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
       secondPassCmd[secondPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
 
-      logger.warn(`Retrying with bitrate ${bitrate / 1000}K`);
+      logger.warn(`Retrying with bitrate ${(bitrate / 1000).toFixed(2)}K`);
 
       triesCount++;
 
