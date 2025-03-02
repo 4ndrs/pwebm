@@ -17,6 +17,8 @@ let forceKilled = false;
 let ffmpegProcess: Subprocess | undefined;
 
 const encode = async (args: ArgsSchema) => {
+  const duration = deduceDuration(args);
+
   const inputs = args.inputs.flatMap((input) => {
     const result = [];
 
@@ -112,8 +114,29 @@ const encode = async (args: ArgsSchema) => {
 
     ffmpegProcess = singlePassProcess;
 
+    let previousProgressPercentage = 0;
+
     processStdout(singlePassProcess, (progress) => {
-      // TODO: implement progress for single pass
+      const newProgressPercentage = Math.trunc(
+        (progress.outTime * 100) / duration,
+      );
+
+      if (newProgressPercentage !== previousProgressPercentage) {
+        // only log unique percentage progress
+        logger.info(
+          `${queue.getStatus()}: {BLUE}${Math.trunc((progress.outTime * 100) / duration)}%{/BLUE}`,
+          {
+            logToConsole: true,
+            fancyConsole: {
+              colors: true,
+              noNewLine: true,
+              clearPreviousLine: true,
+            },
+          },
+        );
+
+        previousProgressPercentage = newProgressPercentage;
+      }
       // need duration
     });
 
@@ -137,10 +160,23 @@ const encode = async (args: ArgsSchema) => {
       return;
     }
 
+    const queueIsDone = queue.getProcessedCount() === queue.getTotalCount();
+
+    logger.info(queue.getStatus() + ": {GREEN}100%{/GREEN}", {
+      logToConsole: true,
+      fancyConsole: {
+        colors: true,
+        noNewLine: queueIsDone ? false : true,
+        clearPreviousLine: true,
+      },
+    });
+
+    if (queueIsDone) {
+      logger.info("All encodings done");
+    }
+
     return;
   }
-
-  const duration = deduceDuration(args);
 
   // this is just for convenience to quick burn subtitles for single input streams
   // picks the first input file and burns its subtitles to the output stream
