@@ -30,7 +30,7 @@ some considerations:
 - [x] check for ffmpeg and ffprobe in path
 - [x] convert webm, retry when limit reached
 - [x] convert any other encoder to mkv copied streams just like purewebm
-- [ ] handle queue
+- [x] handle queue
 - [ ] ffmpeg progress
 - [ ] handle signals
 - [ ] name the process
@@ -52,10 +52,10 @@ some considerations:
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
-## 2025-03-01
+## 2025-03-02
 [x] add unix socket communication (ipc)
 [x] ipc listener
 [x] message sending
 [x] add queue system
-[ ] detect if instance running and connected through ipc
-[ ] send args through the ipc + add to queue
+[x] detect if instance running and connected through ipc
+[x] send args through the ipc + add to queue

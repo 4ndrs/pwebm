@@ -1,6 +1,7 @@
 import os from "os";
 import path from "path";
 
+import { queue } from "./queue";
 import { logger } from "./logger";
 import { TEMP_PATH } from "./paths";
 import { unlinkSync } from "fs";
@@ -52,10 +53,11 @@ const startListener = () => {
 
             break;
           case "enqueue":
-            logger.info("Received enqueue request through the socket");
+            logger.info(
+              "Received new encoding parameters, adding to the queue",
+            );
 
-            // TODO: enqueue data
-            data;
+            queue.push(data);
 
             socket.end(
               JSON.stringify({
@@ -98,57 +100,46 @@ const stopListener = () => {
 
 const sendMessage = async (message: IPCSchema) =>
   new Promise<void>(async (resolve, reject) => {
-    const socket = await Bun.connect({
-      unix: SOCKET_FILE,
-      socket: {
-        data: (socket, rawData) => {
-          const parsedData = ResponseSchema.safeParse(
-            JSON.parse(rawData.toString()),
-          );
-
-          if (!parsedData.success) {
-            logger.error("Invalid response received through the socket");
-
+    try {
+      const socket = await Bun.connect({
+        unix: SOCKET_FILE,
+        socket: {
+          data: (socket, rawData) => {
             socket.end();
 
-            return reject();
-          }
+            const parsedData = ResponseSchema.safeParse(
+              JSON.parse(rawData.toString()),
+            );
 
-          const { success } = parsedData.data;
+            if (!parsedData.success) {
+              logger.error("Invalid response received through the socket");
 
-          switch (message.type) {
-            case "kill":
-              logger.info(
-                success
-                  ? "Received kill response through the socket"
-                  : "Failed to kill the process through the socket",
-              );
-              break;
-            case "enqueue":
-              logger.info(
-                success
-                  ? "Received enqueue response through the socket"
-                  : "Failed to enqueue the process through the socket",
-              );
-              break;
-          }
+              return reject();
+            }
 
-          socket.end();
+            const { success } = parsedData.data;
 
-          resolve();
+            if (!success) {
+              return reject();
+            }
+
+            return resolve();
+          },
         },
-      },
-    });
+      });
 
-    switch (message.type) {
-      case "kill":
-        logger.info("Sending kill request through the socket");
-        socket.write(JSON.stringify(message));
-        break;
-      case "enqueue":
-        logger.info("Sending enqueue request through the socket");
-        socket.write(JSON.stringify(message));
-        break;
+      socket.write(JSON.stringify(message));
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "ENOENT" &&
+        message.type !== "enqueue"
+      ) {
+        logger.info("No current main instance running", { logToConsole: true });
+      }
+
+      reject(error);
     }
   });
 
@@ -156,5 +147,4 @@ export const ipc = {
   sendMessage,
   stopListener,
   startListener,
-  sendKill: () => sendMessage({ type: "kill" }),
 };

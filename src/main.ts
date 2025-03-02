@@ -1,5 +1,6 @@
+import { ipc } from "./ipc";
+import { queue } from "./queue";
 import { logger } from "./logger";
-import { ffmpeg } from "./ffmpeg";
 import { parseArgs } from "./args";
 
 const args = Bun.argv.slice(2);
@@ -39,4 +40,24 @@ try {
   process.exit(1);
 }
 
-ffmpeg.encode(parsedArgs);
+try {
+  // try sending the args to the running process if there is one
+  await ipc.sendMessage({
+    type: "enqueue",
+    data: parsedArgs,
+  });
+
+  logger.info("Sent the encoding parameters to the already running instance", {
+    logToConsole: true,
+  });
+} catch (error) {
+  logger.warn("No running instance found, starting a new queue");
+
+  queue.push(parsedArgs);
+
+  ipc.startListener();
+
+  await queue.processQueue();
+
+  ipc.stopListener();
+}

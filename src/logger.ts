@@ -33,6 +33,7 @@ const writeToFile = (message: string, level: Level) => {
 
 type Options = {
   onlyConsole?: boolean; // only logs to console regardless of the allowed level
+  logToConsole?: boolean; // logs to console regardless of the allowed level
 };
 
 type Message = Parameters<typeof console.log>[0];
@@ -60,7 +61,7 @@ const log = (message: Message, level: Level, options?: Options) => {
     return;
   }
 
-  if (LEVELS_FOR_CONSOLE.includes(level)) {
+  if (LEVELS_FOR_CONSOLE.includes(level) || options?.logToConsole) {
     consoleLog(message);
   }
 

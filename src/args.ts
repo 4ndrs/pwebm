@@ -90,9 +90,21 @@ export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
     }
 
     if (arg === "-kill") {
-      logger.info("Requested kill", { onlyConsole: true });
+      try {
+        await ipc.sendMessage({ type: "kill" });
 
-      await ipc.sendKill();
+        logger.info("Main instance successfully killed", {
+          logToConsole: true,
+        });
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          "code" in error &&
+          error.code !== "ENOENT"
+        ) {
+          logger.error("Couldn't kill the main instance");
+        }
+      }
 
       process.exit();
     }
