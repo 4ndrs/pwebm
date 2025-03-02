@@ -33,10 +33,10 @@ some considerations:
 - [x] socket file for communication
 - [x] handle queue
 - [x] kill implementation
-- [ ] ffmpeg progress
+- [x] ffmpeg progress
+- [ ] status implementation
 - [ ] handle signals
 - [ ] name the process
-- [ ] status implementation
 - [x] version implementation
 - [x] help implementation
 - [ ] add automatic releases with github actions (edge + tagged)

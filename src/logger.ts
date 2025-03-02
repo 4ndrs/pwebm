@@ -31,41 +31,89 @@ const writeToFile = (message: string, level: Level) => {
   appendFileSync(logFile, logMessage, "utf-8");
 };
 
+const COLORS = {
+  RED: "\u001b[1;91m",
+  BLUE: "\u001b[1;94m",
+  GREEN: "\u001b[1;92m",
+  YELLOW: "\u001b[1;93m",
+};
+
+const END_COLOR = "\u001b[0m";
+const CLEAR_LINE = "\r\u001b[K";
+
 type Options = {
   onlyConsole?: boolean; // only logs to console regardless of the allowed level
   logToConsole?: boolean; // logs to console regardless of the allowed level
+  fancyConsole?: {
+    colors?: boolean;
+    noNewLine?: boolean;
+    clearPreviousLine?: boolean;
+  };
 };
 
-type Message = Parameters<typeof console.log>[0];
+type Message = Parameters<typeof print>[0];
 
 const log = (message: Message, level: Level, options?: Options) => {
   let consoleLog: typeof console.log;
 
+  const skipNewLine = options?.fancyConsole?.noNewLine;
+
   switch (level) {
     case "INFO":
-      consoleLog = console.info;
+      consoleLog = (message: string) => print(message, "stdout", skipNewLine);
       break;
     case "WARN":
-      consoleLog = console.warn;
+      consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "ERROR":
-      consoleLog = console.error;
+      consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "DEBUG":
-      consoleLog = console.debug;
+      consoleLog = (message: string) => print(message, "stdout", skipNewLine);
       break;
   }
 
+  if (options?.fancyConsole?.colors) {
+    Object.keys(COLORS).forEach((color) => {
+      const endColorRegex = new RegExp(`\\{\/${color}\\}`, "g");
+      const startColorRegex = new RegExp(`\\{${color}\\}`, "g");
+
+      message = message.replace(
+        startColorRegex,
+        COLORS[color as keyof typeof COLORS],
+      );
+
+      message = message.replace(endColorRegex, END_COLOR);
+    });
+  }
+
+  // i don't want the following in the log file
+  let consoleMessage = message;
+
+  if (options?.fancyConsole?.clearPreviousLine) {
+    consoleMessage = CLEAR_LINE + message;
+  }
+
   if (options?.onlyConsole) {
-    consoleLog(message);
+    consoleLog(consoleMessage);
     return;
   }
 
   if (LEVELS_FOR_CONSOLE.includes(level) || options?.logToConsole) {
-    consoleLog(message);
+    consoleLog(consoleMessage);
   }
 
   writeToFile(message, level);
+};
+
+const print = (
+  message: string,
+  output: "stdout" | "stderr",
+  skipNewLine?: boolean,
+) => {
+  const newLine = skipNewLine ? "" : "\n";
+
+  process[output].write(message + newLine);
 };
 
 export const logger: {

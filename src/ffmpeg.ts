@@ -1,3 +1,4 @@
+import { queue } from "./queue";
 import { logger } from "./logger";
 import { CLI_NAME } from "./constants";
 import { unlinkSync } from "fs";
@@ -93,7 +94,17 @@ const encode = async (args: ArgsSchema) => {
       "-y",
     ];
 
-    logger.info("Processing the single pass");
+    logger.info(
+      queue.getStatus() + ": " + "{BLUE}Processing the single pass{/BLUE}",
+      {
+        logToConsole: true,
+        fancyConsole: {
+          colors: true,
+          noNewLine: true,
+          clearPreviousLine: true,
+        },
+      },
+    );
 
     logger.info("Executing: " + cmd.join(" "));
 
@@ -101,7 +112,11 @@ const encode = async (args: ArgsSchema) => {
 
     ffmpegProcess = singlePassProcess;
 
-    processStdout(singlePassProcess);
+    processStdout(singlePassProcess, (progress) => {
+      // TODO: implement progress for single pass
+      // need duration
+    });
+
     processStderr(singlePassProcess);
 
     await singlePassProcess.exited;
@@ -211,8 +226,15 @@ const encode = async (args: ArgsSchema) => {
     failed = false;
 
     logger.info(
-      "Processing the first pass" +
-        (triesCount > 1 ? ` (try ${triesCount})` : ""),
+      `${queue.getStatus()}: {BLUE}Processing the first pass${triesCount > 1 ? ` {YELLOW}(try ${triesCount}){/YELLOW}` : ""}{/BLUE}`,
+      {
+        logToConsole: true,
+        fancyConsole: {
+          colors: true,
+          noNewLine: true,
+          clearPreviousLine: true,
+        },
+      },
     );
 
     logger.info("Executing: " + firstPassCmd.join(" "));
@@ -242,8 +264,15 @@ const encode = async (args: ArgsSchema) => {
     }
 
     logger.info(
-      "Processing the second pass" +
-        (triesCount > 1 ? ` (try ${triesCount})` : ""),
+      `${queue.getStatus()}: {BLUE}Processing the second pass${triesCount > 1 ? ` {YELLOW}(try ${triesCount}){/YELLOW}` : ""}{/BLUE}`,
+      {
+        logToConsole: true,
+        fancyConsole: {
+          colors: true,
+          noNewLine: true,
+          clearPreviousLine: true,
+        },
+      },
     );
 
     logger.info("Executing: " + secondPassCmd.join(" "));
@@ -252,7 +281,30 @@ const encode = async (args: ArgsSchema) => {
 
     ffmpegProcess = secondPassProcess;
 
+    let previousProgressPercentage = 0;
+
     processStdout(secondPassProcess, (progress) => {
+      const newProgressPercentage = Math.trunc(
+        (progress.outTime * 100) / duration,
+      );
+
+      if (newProgressPercentage !== previousProgressPercentage) {
+        // only log unique percentage progress
+        logger.info(
+          `${queue.getStatus()}: {BLUE}${Math.trunc((progress.outTime * 100) / duration)}%${triesCount > 1 ? ` {YELLOW}(try ${triesCount}){/YELLOW}` : ""}{/BLUE}`,
+          {
+            logToConsole: true,
+            fancyConsole: {
+              colors: true,
+              noNewLine: true,
+              clearPreviousLine: true,
+            },
+          },
+        );
+
+        previousProgressPercentage = newProgressPercentage;
+      }
+
       if (limitInBytes === 0 || failed || progress.totalSize <= limitInBytes) {
         return;
       }
@@ -264,7 +316,15 @@ const encode = async (args: ArgsSchema) => {
       );
 
       logger.warn(
-        `File size is greater than the limit by ${offsetPercentage}% with ${triesCount === 1 ? "crf " + args.crf : "bitrate " + (bitrate / 1000).toFixed(2) + "K"}`,
+        `${queue.getStatus()}: {RED}File size is greater than the limit by ${offsetPercentage}% with ${triesCount === 1 ? "crf " + args.crf : "bitrate " + (bitrate / 1000).toFixed(2) + "K"}{/RED}`,
+        {
+          logToConsole: true,
+          fancyConsole: {
+            colors: true,
+            noNewLine: false,
+            clearPreviousLine: true,
+          },
+        },
       );
 
       if (triesCount === 1) {
@@ -283,7 +343,17 @@ const encode = async (args: ArgsSchema) => {
       firstPassCmd[firstPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
       secondPassCmd[secondPassCmd.lastIndexOf("-b:v") + 1] = bitrate.toString();
 
-      logger.warn(`Retrying with bitrate ${(bitrate / 1000).toFixed(2)}K`);
+      logger.warn(
+        `${queue.getStatus()}: {RED}Retrying with bitrate ${(bitrate / 1000).toFixed(2)}K{/RED}`,
+        {
+          logToConsole: true,
+          fancyConsole: {
+            colors: true,
+            noNewLine: false,
+            clearPreviousLine: false,
+          },
+        },
+      );
 
       triesCount++;
 
@@ -311,6 +381,21 @@ const encode = async (args: ArgsSchema) => {
   if (forceKilled) {
     logger.warn("ffmpeg was killed");
   }
+
+  const queueIsDone = queue.getProcessedCount() === queue.getTotalCount();
+
+  logger.info(queue.getStatus() + ": {GREEN}100%{/GREEN}", {
+    logToConsole: true,
+    fancyConsole: {
+      colors: true,
+      noNewLine: queueIsDone ? false : true,
+      clearPreviousLine: true,
+    },
+  });
+
+  if (queueIsDone) {
+    logger.info("All encodings done");
+  }
 };
 
 const processStderr = async (process: Subprocess) => {
@@ -321,7 +406,7 @@ const processStderr = async (process: Subprocess) => {
 
 const processStdout = async (
   process: Subprocess,
-  onProgress?: (progress: ProgressSchema) => void,
+  onProgress: (progress: ProgressSchema) => void,
 ) => {
   for await (const chunk of process.stdout) {
     const text = new TextDecoder().decode(chunk);
@@ -345,8 +430,7 @@ const processStdout = async (
       continue;
     }
 
-    onProgress?.(parsedProgress.data);
-    console.log("progress:", parsedProgress.data);
+    onProgress(parsedProgress.data);
   }
 };
 

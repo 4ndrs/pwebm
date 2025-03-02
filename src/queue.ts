@@ -56,9 +56,11 @@ const processQueue = async () => {
 
 const getTotalCount = () => store.total;
 const getProcessedCount = () => store.total - store.queue.length;
+const getStatus = () => `Encoding ${getProcessedCount()} of ${store.total}`;
 
 export const queue = {
   push,
+  getStatus,
   processQueue,
   getTotalCount,
   abortProcessing,
