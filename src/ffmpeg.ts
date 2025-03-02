@@ -132,7 +132,7 @@ const encode = async (args: ArgsSchema) => {
     }
 
     if (forceKilled) {
-      logger.warn("ffmpeg was killed");
+      logKilled();
 
       return;
     }
@@ -258,7 +258,7 @@ const encode = async (args: ArgsSchema) => {
     if (forceKilled) {
       removePassLogFile(passLogFile);
 
-      logger.warn("ffmpeg was killed");
+      logKilled();
 
       return;
     }
@@ -379,7 +379,9 @@ const encode = async (args: ArgsSchema) => {
   }
 
   if (forceKilled) {
-    logger.warn("ffmpeg was killed");
+    logKilled();
+
+    return;
   }
 
   const queueIsDone = queue.getProcessedCount() === queue.getTotalCount();
@@ -402,6 +404,19 @@ const processStderr = async (process: Subprocess) => {
   for await (const chunk of process.stderr) {
     stderr += new TextDecoder().decode(chunk);
   }
+};
+
+const logKilled = () => {
+  logger.warn("ffmpeg was killed");
+
+  logger.info(queue.getStatus() + ": {RED}Killed{/RED}", {
+    logToConsole: true,
+    fancyConsole: {
+      colors: true,
+      noNewLine: false,
+      clearPreviousLine: true,
+    },
+  });
 };
 
 const processStdout = async (
