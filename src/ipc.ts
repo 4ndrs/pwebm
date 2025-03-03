@@ -2,12 +2,15 @@ import os from "os";
 import path from "path";
 
 import { queue } from "./queue";
+import { status } from "./status";
 import { logger } from "./logger";
 import { TEMP_PATH } from "./paths";
 import { unlinkSync } from "fs";
+import { assertNever } from "./utils";
 import { PIPE_NAME, SOCKET_NAME } from "./constants";
 import { IPCSchema, ResponseSchema } from "./schema/ipc";
 
+import type { StatusSchema } from "./schema/status";
 import type { UnixSocketListener } from "bun";
 
 // windows doesn't have unix sockets but named pipes
@@ -68,6 +71,19 @@ const startListener = () => {
               } satisfies ResponseSchema),
             );
             break;
+          case "status":
+            logger.info("Received status request, sending the current status");
+
+            socket.end(
+              JSON.stringify({
+                type: "status",
+                success: true,
+                data: status.getStatus(),
+              } satisfies ResponseSchema),
+            );
+            break;
+          default:
+            assertNever(type);
         }
 
         socket.end();
@@ -100,8 +116,14 @@ const stopListener = () => {
   }
 };
 
-const sendMessage = async (message: IPCSchema) =>
-  new Promise<void>(async (resolve, reject) => {
+// overloading
+type SendMessage = {
+  (message: Exclude<IPCSchema, { type: "status" }>): Promise<void>;
+  (message: Extract<IPCSchema, { type: "status" }>): Promise<StatusSchema>;
+};
+
+const sendMessage: SendMessage = async (message) =>
+  new Promise(async (resolve, reject) => {
     try {
       const socket = await Bun.connect({
         unix: SOCKET_FILE,
@@ -114,18 +136,24 @@ const sendMessage = async (message: IPCSchema) =>
             );
 
             if (!parsedData.success) {
+              // couldn't parse
               logger.error("Invalid response received through the socket");
 
               return reject();
             }
 
-            const { success } = parsedData.data;
-
-            if (!success) {
+            if (!parsedData.data.success) {
+              // request did not succeed
               return reject();
             }
 
-            return resolve();
+            if (parsedData.data.type === "status") {
+              const { data } = parsedData.data;
+
+              return resolve(data);
+            }
+
+            return resolve(undefined as void & StatusSchema);
           },
         },
       });
@@ -138,7 +166,9 @@ const sendMessage = async (message: IPCSchema) =>
         error.code === "ENOENT" &&
         message.type !== "enqueue"
       ) {
-        logger.info("No current main instance running", { logToConsole: true });
+        logger.info("No current main instance running", {
+          logToConsole: true,
+        });
       }
 
       reject(error);

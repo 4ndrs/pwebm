@@ -1,4 +1,5 @@
 import { queue } from "./queue";
+import { status } from "./status";
 import { logger } from "./logger";
 import { CLI_NAME } from "./constants";
 import { unlinkSync } from "fs";
@@ -108,6 +109,8 @@ const encode = async (args: ArgsSchema) => {
       },
     );
 
+    status.updateSinglePass();
+
     logger.info("Executing: " + cmd.join(" "));
 
     const singlePassProcess = Bun.spawn({ cmd, stderr: "pipe" });
@@ -134,6 +137,8 @@ const encode = async (args: ArgsSchema) => {
             },
           },
         );
+
+        status.updateSinglePass(newProgressPercentage);
 
         previousProgressPercentage = newProgressPercentage;
       }
@@ -170,6 +175,8 @@ const encode = async (args: ArgsSchema) => {
         clearPreviousLine: true,
       },
     });
+
+    status.updateSinglePass(100);
 
     if (queueIsDone) {
       logger.info("All encodings done");
@@ -273,6 +280,8 @@ const encode = async (args: ArgsSchema) => {
       },
     );
 
+    status.updateFirstPass(undefined, triesCount);
+
     logger.info("Executing: " + firstPassCmd.join(" "));
 
     const firstPassProcess = Bun.spawn({ cmd: firstPassCmd, stderr: "pipe" });
@@ -311,6 +320,8 @@ const encode = async (args: ArgsSchema) => {
       },
     );
 
+    status.updateSecondPass(undefined, triesCount);
+
     logger.info("Executing: " + secondPassCmd.join(" "));
 
     const secondPassProcess = Bun.spawn({ cmd: secondPassCmd, stderr: "pipe" });
@@ -337,6 +348,8 @@ const encode = async (args: ArgsSchema) => {
             },
           },
         );
+
+        status.updateSecondPass(newProgressPercentage, triesCount);
 
         previousProgressPercentage = newProgressPercentage;
       }
@@ -430,6 +443,8 @@ const encode = async (args: ArgsSchema) => {
       clearPreviousLine: true,
     },
   });
+
+  status.updateSecondPass(100);
 
   if (queueIsDone) {
     logger.info("All encodings done");

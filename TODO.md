@@ -34,7 +34,7 @@ some considerations:
 - [x] handle queue
 - [x] kill implementation
 - [x] ffmpeg progress
-- [ ] status implementation
+- [x] status implementation
 - [ ] handle signals
 - [ ] name the process
 - [x] version implementation
@@ -52,4 +52,4 @@ some considerations:
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
 
-## 2025-03-02
+## 2025-03-03

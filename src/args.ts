@@ -104,13 +104,32 @@ export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
         ) {
           logger.error("Couldn't kill the main instance");
         }
+
+        process.exit(1);
       }
 
       process.exit();
     }
 
     if (arg === "-status") {
-      logger.info("Requested status", { onlyConsole: true });
+      try {
+        const status = await ipc.sendMessage({ type: "status" });
+
+        logger.info(JSON.stringify(status, null, 2), { onlyConsole: true });
+
+        logger.info("Status printed to the screen");
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          "code" in error &&
+          error.code !== "ENOENT"
+        ) {
+          logger.error("Couldn't get the status of the main instance");
+        }
+
+        process.exit(1);
+      }
+
       process.exit();
     }
 
