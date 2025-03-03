@@ -62,12 +62,13 @@ const encode = async (args: ArgsSchema) => {
       generateRandomFilename() + (isWebmEncoder ? ".webm" : ".mkv"),
     );
 
+  const userMapping = !!args.extraParams?.includes("-map");
+
   if (!isWebmEncoder) {
     // if the encoder is not for webms (libvpx/libvpx-vp9), let's just do a single pass with the copied streams
     // the goal here is to copy everything (audio, subtitles, attachments, etc) as is, and encode the video stream
     // with the crf value in constant quality mode, if map is used in extra params, we will drop our mappings
     // this is an escape hatch for users that sometimes want to use other encoders like libx264 with copied streams (me)
-    const userMapping = !!args.extraParams?.includes("-map");
 
     const mappings = userMapping
       ? []
@@ -196,7 +197,14 @@ const encode = async (args: ArgsSchema) => {
     lavfi.push("-lavfi", subtitles);
   }
 
-  const noAudio = extraParams.includes("-c:a") ? [] : ["-an"];
+  // we don't want any of these
+  // i could explicitly just map the video stream, but want ffmpeg pick it automatically
+  // as the default, if the codec options are used or any mapping, we will skip these
+  const noAudio = extraParams.includes("-c:a") || userMapping ? [] : ["-an"];
+  const noSoftSubs = extraParams.includes("-c:s") || userMapping ? [] : ["-sn"];
+
+  const noDataStreams =
+    extraParams.includes("-c:d") || userMapping ? [] : ["-dn"];
 
   const cmd = [
     "ffmpeg",
@@ -228,6 +236,8 @@ const encode = async (args: ArgsSchema) => {
 
   const firstPassCmd = [
     ...cmd,
+    "-dn",
+    "-sn",
     "-an", // first pass doesn't need audio
     "-f",
     "null",
@@ -243,6 +253,8 @@ const encode = async (args: ArgsSchema) => {
   const secondPassCmd = [
     ...cmd,
     ...noAudio,
+    ...noSoftSubs,
+    ...noDataStreams,
     "-f",
     "webm",
     "-pass",
