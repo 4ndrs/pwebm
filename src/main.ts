@@ -1,7 +1,30 @@
 import { ipc } from "./ipc";
 import { queue } from "./queue";
 import { logger } from "./logger";
+import { CLI_NAME } from "./constants";
 import { parseArgs } from "./args";
+
+process.title = CLI_NAME;
+
+process.on("SIGINT", () => {
+  logger.warn("Received SIGINT, aborting processing");
+  queue.abortProcessing();
+});
+
+process.on("SIGTERM", () => {
+  logger.warn("Received SIGTERM, aborting processing");
+  queue.abortProcessing();
+});
+
+process.on("SIGHUP", () => {
+  logger.warn("Received SIGHUP, aborting processing");
+  queue.abortProcessing();
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception: " + error.message);
+  queue.abortProcessing();
+});
 
 const args = Bun.argv.slice(2);
 

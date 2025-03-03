@@ -35,8 +35,8 @@ some considerations:
 - [x] kill implementation
 - [x] ffmpeg progress
 - [x] status implementation
-- [ ] handle signals
-- [ ] name the process
+- [x] handle signals
+- [x] name the process
 - [x] version implementation
 - [x] help implementation
 - [ ] add automatic releases with github actions (edge + tagged)
