@@ -36,6 +36,7 @@ const COLORS = {
   BLUE: "\u001b[1;94m",
   GREEN: "\u001b[1;92m",
   YELLOW: "\u001b[1;93m",
+  ORANGE: "\u001b[1;38;5;208m",
 };
 
 const END_COLOR = "\u001b[0m";
@@ -63,9 +64,11 @@ const log = (message: Message, level: Level, options?: Options) => {
       consoleLog = (message: string) => print(message, "stdout", skipNewLine);
       break;
     case "WARN":
+      message = `{ORANGE}${message}{/ORANGE}`;
       consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "ERROR":
+      message = `{RED}${message}{/RED}`;
       consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "DEBUG":
@@ -73,7 +76,7 @@ const log = (message: Message, level: Level, options?: Options) => {
       break;
   }
 
-  if (options?.fancyConsole?.colors) {
+  if (options?.fancyConsole?.colors || level === "ERROR" || level === "WARN") {
     Object.keys(COLORS).forEach((color) => {
       const endColorRegex = new RegExp(`\\{\/${color}\\}`, "g");
       const startColorRegex = new RegExp(`\\{${color}\\}`, "g");
