@@ -1,6 +1,5 @@
 import { ffmpeg } from "./ffmpeg";
 import { ArgsSchema } from "./schema/args";
-import { setTimeout } from "timers/promises";
 
 const store: {
   total: number;
@@ -20,13 +19,13 @@ const push = (args: ArgsSchema) => {
 };
 
 const abortProcessing = async () => {
+  if (!store.processing) {
+    return;
+  }
+
   store.abort = true;
 
-  ffmpeg.kill();
-
-  while (store.processing) {
-    await setTimeout(100);
-  }
+  await ffmpeg.kill();
 };
 
 const processQueue = async () => {
@@ -37,6 +36,10 @@ const processQueue = async () => {
   store.processing = true;
 
   while (getProcessedCount() < store.total) {
+    if (store.abort) {
+      break;
+    }
+
     const current = store.queue.shift();
 
     if (!current) {
@@ -44,13 +47,8 @@ const processQueue = async () => {
     }
 
     await ffmpeg.encode(current);
-
-    if (store.abort) {
-      break;
-    }
   }
 
-  store.abort = false;
   store.processing = false;
 };
 

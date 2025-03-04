@@ -2,6 +2,7 @@ import { queue } from "./queue";
 import { status } from "./status";
 import { logger } from "./logger";
 import { CLI_NAME } from "./constants";
+import { cleanExit } from "./utils";
 import { unlinkSync } from "fs";
 import { ArgsSchema } from "./schema/args";
 import { FFProbeSchema } from "./schema/ffprobe";
@@ -15,10 +16,11 @@ type Subprocess = _Subprocess<"ignore", "pipe", "pipe">;
 
 let stderr = "";
 let forceKilled = false;
+let passLogFile: string | undefined;
 let ffmpegProcess: Subprocess | undefined;
 
 const encode = async (args: ArgsSchema) => {
-  const duration = deduceDuration(args);
+  const duration = await deduceDuration(args);
 
   const inputs = args.inputs.flatMap((input) => {
     const result = [];
@@ -157,12 +159,10 @@ const encode = async (args: ArgsSchema) => {
       );
       logger.error(stderr);
 
-      process.exit(1);
+      cleanExit(1);
     }
 
     if (forceKilled) {
-      logKilled();
-
       return;
     }
 
@@ -232,7 +232,7 @@ const encode = async (args: ArgsSchema) => {
     "-1",
   ];
 
-  const passLogFile = path.join(TEMP_PATH, CLI_NAME + "2pass");
+  passLogFile = path.join(TEMP_PATH, CLI_NAME + "2pass");
 
   const firstPassCmd = [
     ...cmd,
@@ -307,16 +307,12 @@ const encode = async (args: ArgsSchema) => {
     if (firstPassProcess.exitCode !== 0 && !forceKilled) {
       logger.error("Couldn't process first pass");
 
-      removePassLogFile(passLogFile);
+      removePassLogFile();
 
-      process.exit(1);
+      cleanExit(1);
     }
 
     if (forceKilled) {
-      removePassLogFile(passLogFile);
-
-      logKilled();
-
       return;
     }
 
@@ -428,8 +424,6 @@ const encode = async (args: ArgsSchema) => {
     await secondPassProcess.exited;
   } while (failed);
 
-  removePassLogFile(passLogFile);
-
   if (ffmpegProcess.exitCode !== 0 && !forceKilled) {
     logger.error(
       "Error processing the second pass, ffmpeg exited with code: " +
@@ -438,12 +432,10 @@ const encode = async (args: ArgsSchema) => {
 
     logger.error(stderr);
 
-    process.exit(1);
+    cleanExit(1);
   }
 
   if (forceKilled) {
-    logKilled();
-
     return;
   }
 
@@ -460,6 +452,8 @@ const encode = async (args: ArgsSchema) => {
 
   status.updateSecondPass(100);
 
+  removePassLogFile();
+
   if (queueIsDone) {
     logger.info("All encodings done");
   }
@@ -469,19 +463,6 @@ const processStderr = async (process: Subprocess) => {
   for await (const chunk of process.stderr) {
     stderr += new TextDecoder().decode(chunk);
   }
-};
-
-const logKilled = () => {
-  logger.warn("ffmpeg was killed");
-
-  logger.info(queue.getStatus() + ": {RED}Killed{/RED}", {
-    logToConsole: true,
-    fancyConsole: {
-      colors: true,
-      noNewLine: false,
-      clearPreviousLine: true,
-    },
-  });
 };
 
 const processStdout = async (
@@ -514,8 +495,8 @@ const processStdout = async (
   }
 };
 
-const kill = () => {
-  if (!ffmpegProcess) {
+const kill = async () => {
+  if (!ffmpegProcess || ffmpegProcess.killed) {
     return;
   }
 
@@ -523,15 +504,36 @@ const kill = () => {
 
   forceKilled = true;
   ffmpegProcess.kill("SIGKILL");
+
+  await ffmpegProcess.exited;
+
+  logger.warn("ffmpeg was killed");
+
+  logger.info(queue.getStatus() + ": {RED}Killed{/RED}", {
+    logToConsole: true,
+    fancyConsole: {
+      colors: true,
+      noNewLine: false,
+      clearPreviousLine: true,
+    },
+  });
+
+  removePassLogFile();
 };
 
-const removePassLogFile = (file: string) => {
-  file = file + "-0.log";
+const removePassLogFile = () => {
+  if (!passLogFile) {
+    return;
+  }
+
+  let file = passLogFile + "-0.log";
 
   try {
-    logger.info(`Deleting the ${file} file`);
+    logger.info("Deleting the pass log file: " + file);
 
     unlinkSync(file);
+
+    passLogFile = undefined;
   } catch (error) {
     logger.error("Couldn't delete pass log file: " + file);
 
@@ -573,7 +575,7 @@ const escapeSpecialCharacters = (value: string) =>
     // Comma
     .replace(/,/g, "\\,");
 
-const deduceDuration = (args: ArgsSchema) => {
+const deduceDuration = async (args: ArgsSchema) => {
   // if output seeking stop time is set with no output start time, the
   // duration will be the stop time
   if (args.output?.stopTime && !args.output?.startTime) {
@@ -590,7 +592,7 @@ const deduceDuration = (args: ArgsSchema) => {
     logger.error("Error reading the input metadata");
     logger.error(error.message);
 
-    process.exit(1);
+    return await cleanExit(1);
   }
 
   // the following is a very simplistic approach to deduce the duration
