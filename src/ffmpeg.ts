@@ -380,6 +380,7 @@ const encode = async (args: ArgsSchema) => {
         `${queue.getStatus()}: {RED}File size is greater than the limit by ${offsetPercentage}% with ${triesCount === 1 ? "crf " + args.crf : "bitrate " + (bitrate / 1000).toFixed(2) + "K"}{/RED}`,
         {
           logToConsole: true,
+          noDefaultColors: true,
           fancyConsole: {
             colors: true,
             noNewLine: false,
@@ -408,6 +409,7 @@ const encode = async (args: ArgsSchema) => {
         `${queue.getStatus()}: {RED}Retrying with bitrate ${(bitrate / 1000).toFixed(2)}K{/RED}`,
         {
           logToConsole: true,
+          noDefaultColors: true,
           fancyConsole: {
             colors: true,
             noNewLine: false,

@@ -45,6 +45,7 @@ const CLEAR_LINE = "\r\u001b[K";
 type Options = {
   onlyConsole?: boolean; // only logs to console regardless of the allowed level
   logToConsole?: boolean; // logs to console regardless of the allowed level
+  noDefaultColors?: boolean; // don't show default colors for warn and error levels
   fancyConsole?: {
     colors?: boolean;
     noNewLine?: boolean;
@@ -64,11 +65,17 @@ const log = (message: Message, level: Level, options?: Options) => {
       consoleLog = (message: string) => print(message, "stdout", skipNewLine);
       break;
     case "WARN":
-      message = `{ORANGE}${message}{/ORANGE}`;
+      if (!options?.noDefaultColors) {
+        message = `{ORANGE}${message}{/ORANGE}`;
+      }
+
       consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "ERROR":
-      message = `{RED}${message}{/RED}`;
+      if (!options?.noDefaultColors) {
+        message = `{RED}${message}{/RED}`;
+      }
+
       consoleLog = (message: string) => print(message, "stderr", skipNewLine);
       break;
     case "DEBUG":
