@@ -43,17 +43,11 @@ some considerations:
 - [x] if input is missing after some other arg, the default parse error is shown
 - [x] warn color is messed up for the message shown when the file limit is reached because of default warn color
 - [x] implement better cleaning process before exit
-- [ ] add automatic releases with github actions (edge + tagged)
-- [ ] add bun bundled executable package releases to the automatic releases
+- [x] release tagged versions in npm
+- [x] it's not part of this repo, but don't forget to improve the helper script for PureMPV (pwebm-helper), it has a missing readme
 - [ ] update readme
 - [ ] add subs flag warning to the readme (how it works, output seeking needed, etc)
-- [ ] release tagged versions in npm
-- [ ] it's not part of this repo, but don't forget to improve the helper script for PureMPV (pwebm-helper), it has a missing readme
 
-### the following is just extra not implemented on purewebm but was its initial vision (can skip)
-- [ ] implement conversion logger view (save previous conversions to db with last bitrate info)
-- [ ] redo conversions in logger view
+### Might be nice to have
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
-
-## 2025-03-03
