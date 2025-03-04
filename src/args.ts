@@ -37,15 +37,6 @@ const RECOGNIZED_ARGS = [
 ];
 
 export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
-  if (args.length === 0) {
-    printUsage();
-
-    // if the user isn't using any of the quick actions we require the -i flag
-    logger.error("Input file is required");
-
-    process.exit(1);
-  }
-
   const rawArgs: Partial<ArgsSchema> = {};
 
   let skip = false;
@@ -377,6 +368,15 @@ export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
     seeking = undefined;
   }
 
+  if (!rawArgs.inputs) {
+    printUsage();
+
+    // if the user isn't using any of the quick actions we require the -i flag
+    logger.error("Input file is required");
+
+    process.exit(1);
+  }
+
   const parsedArgs = ArgsSchema.safeParse(rawArgs);
 
   if (!parsedArgs.success) {
@@ -421,7 +421,7 @@ Options:
   -c:v <encoder>             The video encoder to use (default is ${config.encoder})
   -deadline {good,best}      The deadline for libvpx-vp9; good is the recommended one, best has the best
                              compression efficiency but takes the most time (default is ${config.deadline})
-  -crf <value>               The crf to use (default is 24)
+  -crf <value>               The crf to use (default is ${config.crf})
   -cpu-used {0,1,2,3,4,5}    The cpu-used for libvpx-vp9; a number between 0 and 5 inclusive, the higher
                              the number the faster the encoding will be with a quality trade-off (default is ${config.cpuUsed})
   -subs                      Burn the subtitles onto the output file; this flag will automatically use

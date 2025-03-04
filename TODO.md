@@ -39,6 +39,10 @@ some considerations:
 - [x] name the process
 - [x] version implementation
 - [x] help implementation
+- [x] args.ts help is missing dynamic default for crf
+- [x] if input is missing after some other arg, the default parse error is shown
+- [ ] warn color is messed up for the message shown when the file limit is reached because of default warn color
+- [ ] implement better cleaning process before exit
 - [ ] add automatic releases with github actions (edge + tagged)
 - [ ] add bun bundled executable package releases to the automatic releases
 - [ ] update readme
