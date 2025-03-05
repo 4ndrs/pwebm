@@ -45,3 +45,7 @@ The script worked fine for me for 2 years, but maintenance and installation on n
 This new version is a lot more organized, and was written with cross-platform compatibility in mind, like using named pipes on Windows instead of unix sockets, and properly handling paths with `path.join()` instead of using hard coded paths. Unfortunately at the time of this writting, I haven't been able to test it on Windows yet, but the foundation is there for anyone who wants to try it out.
 
 The script was mainly written to use with [PureMPV](https://github.com/4ndrs/PureMPV) and [pwebm-helper](https://github.com/4ndrs/pwebm-helper), but it can be used independently as well, if you are comfortable with the command line.
+
+## Usage
+
+[Usage Preview](https://github.com/user-attachments/assets/1800f80c-db37-4fd4-9652-3e68aeb645d5)
