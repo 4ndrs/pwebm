@@ -51,3 +51,4 @@ some considerations:
 ### Might be nice to have
 - [ ] add limit for the amount of tries to redo a conversion
 - [ ] percentage bitrate offset when retrying a conversion with new calcs
+- [ ] handle no duration case, maybe adding an additional crf mode instead of bitrate calcs

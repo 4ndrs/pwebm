@@ -14,7 +14,7 @@ import path from "path";
 
 type Subprocess = _Subprocess<"ignore", "pipe", "pipe">;
 
-let stderr = "";
+let stderr: string;
 let forceKilled = false;
 let passLogFile: string | undefined;
 let ffmpegProcess: Subprocess | undefined;
@@ -116,6 +116,8 @@ const encode = async (args: ArgsSchema) => {
 
     logger.info("Executing: " + cmd.join(" "));
 
+    stderr = "";
+
     const singlePassProcess = Bun.spawn({ cmd, stderr: "pipe" });
 
     ffmpegProcess = singlePassProcess;
@@ -153,13 +155,14 @@ const encode = async (args: ArgsSchema) => {
     await singlePassProcess.exited;
 
     if (ffmpegProcess.exitCode !== 0 && !forceKilled) {
+      logger.error("\n" + stderr);
+
       logger.error(
         "Error processing the single pass, ffmpeg exited with code: " +
           ffmpegProcess.exitCode,
       );
-      logger.error(stderr);
 
-      cleanExit(1);
+      await cleanExit(1);
     }
 
     if (forceKilled) {
@@ -296,6 +299,8 @@ const encode = async (args: ArgsSchema) => {
 
     logger.info("Executing: " + firstPassCmd.join(" "));
 
+    stderr = "";
+
     const firstPassProcess = Bun.spawn({ cmd: firstPassCmd, stderr: "pipe" });
 
     ffmpegProcess = firstPassProcess;
@@ -305,11 +310,16 @@ const encode = async (args: ArgsSchema) => {
     await firstPassProcess.exited;
 
     if (firstPassProcess.exitCode !== 0 && !forceKilled) {
-      logger.error("Couldn't process first pass");
+      logger.error("\n" + stderr);
+
+      logger.error(
+        "Error processing the single pass, ffmpeg exited with code: " +
+          ffmpegProcess.exitCode,
+      );
 
       removePassLogFile();
 
-      cleanExit(1);
+      await cleanExit(1);
     }
 
     if (forceKilled) {
@@ -331,6 +341,8 @@ const encode = async (args: ArgsSchema) => {
     status.updateSecondPass(undefined, triesCount);
 
     logger.info("Executing: " + secondPassCmd.join(" "));
+
+    stderr = "";
 
     const secondPassProcess = Bun.spawn({ cmd: secondPassCmd, stderr: "pipe" });
 
@@ -425,14 +437,14 @@ const encode = async (args: ArgsSchema) => {
   } while (failed);
 
   if (ffmpegProcess.exitCode !== 0 && !forceKilled) {
+    logger.error("\n" + stderr);
+
     logger.error(
       "Error processing the second pass, ffmpeg exited with code: " +
         ffmpegProcess.exitCode,
     );
 
-    logger.error(stderr);
-
-    cleanExit(1);
+    await cleanExit(1);
   }
 
   if (forceKilled) {
@@ -452,11 +464,11 @@ const encode = async (args: ArgsSchema) => {
 
   status.updateSecondPass(100);
 
-  removePassLogFile();
-
   if (queueIsDone) {
     logger.info("All encodings done");
   }
+
+  removePassLogFile();
 };
 
 const processStderr = async (process: Subprocess) => {
