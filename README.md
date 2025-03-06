@@ -97,7 +97,7 @@ pwebm -ss 00:00:02.268 -to 00:00:10.310 -i /tmp/Videos/nijinosaki.mkv
 pwebm -i /tmp/Videos/nijinosaki.mkv -ss 00:00:02.268 -to 00:00:10.310 -subs
 
 # Encode a webm with size limit of 6 MiB and audio
-pwebm -i /tmp/Videos/nijinosaki.mkv --size-limit 6 --extra-params -c:a libopus -b:a 128k;
+pwebm -i /tmp/Videos/nijinosaki.mkv --size-limit 6 --extra-params -c:a libopus -b:a 128k
 
 # Encode an h264 mkv with crf 24 and other streams copied
 pwebm -ss 00:00:02.268 -to 00:00:10.310 -i /tmp/Videos/nijinosaki.mkv -c:v libx264
