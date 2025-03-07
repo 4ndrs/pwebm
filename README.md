@@ -27,7 +27,7 @@ bun i -g git+https://github.com/4ndrs/pwebm.git
 
 ## Historical Background & Purpose
 
-In 2022, I wrote a script for the mpv media player called [PureMPV](https://github.com/4ndrs/PureMPV) that would help extracting the currently watched video's information, like the timestamps at certain points, and the the cropping coordinates, which would then later be used for encoding videos with ffmpeg with specific parameters.
+In 2022, I wrote a script for the mpv media player called [PureMPV](https://github.com/4ndrs/PureMPV) that would help extracting the currently watched video's information, like the timestamps at certain points, and the cropping coordinates, which would then later be used for encoding videos with ffmpeg with specific parameters.
 
 Up to that point, I mostly spent the time encoding short webm files to keep and share on some imageboards, as well as encoding some mkv files with streams and attachments copied, so I wanted to integrate this functionality in some way with PureMPV. I didn't like the idea of having PureMPV to do the encoding itself, I wanted a seperate process to handle this independently, so I could stop or start another mpv window without affecting the encoding process. I wrote down some of the initial requirements at the time, which were the following:
 
