@@ -8,9 +8,8 @@ import {
   COPYRIGHT_YEAR,
 } from "./constants";
 
-import { ipc } from "./ipc";
 import { config } from "./config";
-import { logger } from "./logger";
+import { ipcClient } from "./ipc/client";
 import { ArgsSchema } from "./schema/args";
 
 const RECOGNIZED_ARGS = [
@@ -34,371 +33,8 @@ const RECOGNIZED_ARGS = [
   "-ep",
   "--extra-params",
   "--video-path",
+  "--no-log-file",
 ];
-
-export const parseArgs = async (args: string[]): Promise<ArgsSchema> => {
-  const rawArgs: Partial<ArgsSchema> = {};
-
-  let skip = false;
-  let isExtraParam = false;
-  let seeking: { startTime?: string; stopTime?: string } | undefined;
-
-  const skipNext = () => (skip = true);
-
-  for (let index = 0; index < args.length; index++) {
-    const arg = args[index];
-
-    if (skip) {
-      skip = false;
-      continue;
-    }
-
-    if (isExtraParam) {
-      rawArgs.extraParams?.push(arg);
-      continue;
-    }
-
-    if (arg.startsWith("-") && !RECOGNIZED_ARGS.includes(arg)) {
-      printUsage();
-
-      logger.error(`Unrecognized argument: ${arg}`);
-
-      process.exit(1);
-    }
-
-    if (["-h", "--help"].includes(arg)) {
-      printUsage();
-
-      process.exit();
-    }
-
-    if (["-v", "--version"].includes(arg)) {
-      logger.info(
-        `${CLI_NAME} version ${VERSION}\nCopyright (c) ${COPYRIGHT_YEAR} ${AUTHOR}\nLicensed under the ${LICENSE} License\n${HOMEPAGE}`,
-        { onlyConsole: true },
-      );
-      process.exit();
-    }
-
-    if (arg === "-kill") {
-      try {
-        await ipc.sendMessage({ type: "kill" });
-
-        logger.info("Main instance successfully killed", {
-          logToConsole: true,
-        });
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          "code" in error &&
-          error.code !== "ENOENT"
-        ) {
-          logger.error("Couldn't kill the main instance");
-        }
-
-        process.exit(1);
-      }
-
-      process.exit();
-    }
-
-    if (arg === "-status") {
-      try {
-        const status = await ipc.sendMessage({ type: "status" });
-
-        logger.info(JSON.stringify(status, null, 2), { onlyConsole: true });
-
-        logger.info("Status printed to the screen");
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          "code" in error &&
-          error.code !== "ENOENT"
-        ) {
-          logger.error("Couldn't get the status of the main instance");
-        }
-
-        process.exit(1);
-      }
-
-      process.exit();
-    }
-
-    if (!arg.startsWith("-") && !arg.startsWith("--")) {
-      if (rawArgs.output?.file) {
-        logger.error("Only one output file is allowed");
-
-        logger.debug(
-          `Current output file: ${rawArgs.output.file}, new file: ${arg}`,
-        );
-
-        process.exit(1);
-      }
-
-      if (!rawArgs.output) {
-        rawArgs.output = {};
-      }
-
-      rawArgs.output.file = arg;
-
-      continue;
-    }
-
-    if (arg === "-ss") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      if (!seeking) {
-        seeking = {};
-      }
-
-      seeking.startTime = args[index + 1];
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-to") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      if (!seeking) {
-        seeking = {};
-      }
-
-      seeking.stopTime = args[index + 1];
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-i") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      if (!rawArgs.inputs) {
-        rawArgs.inputs = [];
-      }
-
-      rawArgs.inputs.push({
-        file: args[index + 1],
-        ...seeking,
-      });
-
-      seeking = undefined;
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-subs") {
-      rawArgs.subs = true;
-
-      continue;
-    }
-
-    if (arg === "-sl" || arg === "--size-limit") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      const sizeLimit = Number(args[index + 1]);
-
-      if (isNaN(sizeLimit)) {
-        logInvalidNumber(arg, sizeLimit);
-
-        process.exit(1);
-      }
-
-      rawArgs.sizeLimit = sizeLimit;
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-ep" || arg === "--extra-params") {
-      if (args[index + 1] === undefined) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      isExtraParam = true;
-
-      rawArgs.extraParams = [];
-
-      continue;
-    }
-
-    if (arg === "--video-path") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      rawArgs.videoPath = args[index + 1];
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-crf") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      const crf = Number(args[index + 1]);
-
-      if (isNaN(crf)) {
-        logInvalidNumber(arg, crf);
-
-        process.exit(1);
-      }
-
-      rawArgs.crf = crf;
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-cpu-used") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      const cpuUsed = Number(args[index + 1]);
-
-      if (isNaN(cpuUsed)) {
-        logInvalidNumber(arg, cpuUsed);
-
-        process.exit(1);
-      }
-
-      if (ArgsSchema.shape.cpuUsed.safeParse(cpuUsed).success === false) {
-        logger.error(
-          `The ${arg} flag requires a number between 0 and 5 inclusive. "${cpuUsed}" is out of that range`,
-        );
-
-        process.exit(1);
-      }
-
-      rawArgs.cpuUsed = cpuUsed as 0 | 1 | 2 | 3 | 4 | 5;
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-deadline") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      if (!["good", "best"].includes(args[index + 1])) {
-        logger.error(
-          `The ${arg} flag requires either "good" or "best". "${args[index + 1]}" is not a valid value`,
-        );
-
-        process.exit(1);
-      }
-
-      rawArgs.deadline = args[index + 1] as "good" | "best";
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-c:v") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      rawArgs.encoder = args[index + 1];
-
-      skipNext();
-
-      continue;
-    }
-
-    if (arg === "-lavfi") {
-      if (args[index + 1] === undefined || args[index + 1].startsWith("-")) {
-        logMissingArg(arg);
-
-        process.exit(1);
-      }
-
-      rawArgs.lavfi = args[index + 1];
-
-      skipNext();
-
-      continue;
-    }
-  }
-
-  if (seeking) {
-    rawArgs.output = { ...rawArgs.output, ...seeking };
-
-    seeking = undefined;
-  }
-
-  if (!rawArgs.inputs) {
-    printUsage();
-
-    // if the user isn't using any of the quick actions we require the -i flag
-    logger.error("Input file is required");
-
-    process.exit(1);
-  }
-
-  const parsedArgs = ArgsSchema.safeParse(rawArgs);
-
-  if (!parsedArgs.success) {
-    logger.error("Error parsing the arguments");
-
-    logger.error(
-      JSON.stringify(parsedArgs.error.flatten().fieldErrors, null, 2),
-    );
-
-    process.exit(1);
-  }
-
-  return parsedArgs.data;
-};
-
-const logMissingArg = (arg: string) =>
-  logger.error(`The ${arg} flag requires an argument`);
-
-const logInvalidNumber = (arg: string, value: number) =>
-  logger.error(
-    `The ${arg} flag requires a number. "${value}" is not a valid number`,
-  );
 
 const printUsage = () => {
   const usage = `Usage: ${CLI_NAME} [options] [[infile options] -i infile]... [outfile options] [outfile] [extra params]
@@ -430,16 +66,378 @@ Options:
   -sl, --size-limit <limit>  The size limit of the output file in MiB, use 0 for no limit (default is ${config.sizeLimit})
   --video-path <path>        The video path where the video files are stored (default is ${config.videoPath})
                              this is overridden if the output file is specified
+  --no-log-file              Don't log to the log file
   -ep, --extra-params <params>
                              The extra parameters to pass to ffmpeg, these will be appended making it
                              possible to override some defaults. This option has to be the last one, everything
                              will be passed as is to ffmpeg
 
 Examples:
-  ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" -ss 00:00:02.268 -to 00:00:10.310 
+  ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" -ss 00:00:02.268 -to 00:00:10.310
   ${CLI_NAME} -i "/tmp/Videos/nijinosaki.mkv" --size-limit 6 -subs --extra-params -map 0:a -c:a libopus -b:a 128k`;
 
-  logger.info(usage, {
-    onlyConsole: true,
-  });
+  console.info(usage);
 };
+
+const logMissingArg = (arg: string) =>
+  console.error(`The ${arg} flag requires an argument`);
+
+const logInvalidNumber = (arg: string, value: number) =>
+  console.error(
+    `The ${arg} flag requires a number. "${value}" is not a valid number`,
+  );
+
+const argv = Bun.argv.slice(2);
+
+const rawArgs: Partial<ArgsSchema> = {};
+
+let skip = false;
+let isExtraParam = false;
+let seeking: { startTime?: string; stopTime?: string } | undefined;
+
+const skipNext = () => (skip = true);
+
+for (let index = 0; index < argv.length; index++) {
+  const arg = argv[index];
+
+  if (skip) {
+    skip = false;
+    continue;
+  }
+
+  if (isExtraParam) {
+    rawArgs.extraParams?.push(arg);
+    continue;
+  }
+
+  if (arg.startsWith("-") && !RECOGNIZED_ARGS.includes(arg)) {
+    printUsage();
+
+    console.error(`Unrecognized argument: ${arg}`);
+
+    process.exit(1);
+  }
+
+  if (["-h", "--help"].includes(arg)) {
+    printUsage();
+
+    process.exit();
+  }
+
+  if (["-v", "--version"].includes(arg)) {
+    console.info(
+      `${CLI_NAME} version ${VERSION}\nCopyright (c) ${COPYRIGHT_YEAR} ${AUTHOR}\nLicensed under the ${LICENSE} License\n${HOMEPAGE}`,
+    );
+    process.exit();
+  }
+
+  if (arg === "-kill") {
+    try {
+      await ipcClient.sendMessage({ type: "kill" });
+
+      console.info("Main instance successfully killed");
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code !== "ENOENT"
+      ) {
+        console.error("Couldn't kill the main instance");
+      }
+
+      process.exit(1);
+    }
+
+    process.exit();
+  }
+
+  if (arg === "-status") {
+    try {
+      const status = await ipcClient.sendMessage({ type: "status" });
+
+      console.info(JSON.stringify(status, null, 2));
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code !== "ENOENT"
+      ) {
+        console.error("Couldn't get the status of the main instance");
+      }
+
+      process.exit(1);
+    }
+
+    process.exit();
+  }
+
+  if (!arg.startsWith("-") && !arg.startsWith("--")) {
+    if (rawArgs.output?.file) {
+      console.error("Only one output file is allowed");
+
+      console.debug(
+        `Current output file: ${rawArgs.output.file}, new file: ${arg}`,
+      );
+
+      process.exit(1);
+    }
+
+    if (!rawArgs.output) {
+      rawArgs.output = {};
+    }
+
+    rawArgs.output.file = arg;
+
+    continue;
+  }
+
+  if (arg === "-ss") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    if (!seeking) {
+      seeking = {};
+    }
+
+    seeking.startTime = argv[index + 1];
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-to") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    if (!seeking) {
+      seeking = {};
+    }
+
+    seeking.stopTime = argv[index + 1];
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-i") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    if (!rawArgs.inputs) {
+      rawArgs.inputs = [];
+    }
+
+    rawArgs.inputs.push({
+      file: argv[index + 1],
+      ...seeking,
+    });
+
+    seeking = undefined;
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-subs") {
+    rawArgs.subs = true;
+
+    continue;
+  }
+
+  if (arg === "-sl" || arg === "--size-limit") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    const sizeLimit = Number(argv[index + 1]);
+
+    if (isNaN(sizeLimit)) {
+      logInvalidNumber(arg, sizeLimit);
+
+      process.exit(1);
+    }
+
+    rawArgs.sizeLimit = sizeLimit;
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-ep" || arg === "--extra-params") {
+    if (argv[index + 1] === undefined) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    isExtraParam = true;
+
+    rawArgs.extraParams = [];
+
+    continue;
+  }
+
+  if (arg === "--video-path") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    rawArgs.videoPath = argv[index + 1];
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "--no-log-file") {
+    rawArgs.noLogFile = true;
+
+    continue;
+  }
+
+  if (arg === "-crf") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    const crf = Number(argv[index + 1]);
+
+    if (isNaN(crf)) {
+      logInvalidNumber(arg, crf);
+
+      process.exit(1);
+    }
+
+    rawArgs.crf = crf;
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-cpu-used") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    const cpuUsed = Number(argv[index + 1]);
+
+    if (isNaN(cpuUsed)) {
+      logInvalidNumber(arg, cpuUsed);
+
+      process.exit(1);
+    }
+
+    if (ArgsSchema.shape.cpuUsed.safeParse(cpuUsed).success === false) {
+      console.error(
+        `The ${arg} flag requires a number between 0 and 5 inclusive. "${cpuUsed}" is out of that range`,
+      );
+
+      process.exit(1);
+    }
+
+    rawArgs.cpuUsed = cpuUsed as 0 | 1 | 2 | 3 | 4 | 5;
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-deadline") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    if (!["good", "best"].includes(argv[index + 1])) {
+      console.error(
+        `The ${arg} flag requires either "good" or "best". "${argv[index + 1]}" is not a valid value`,
+      );
+
+      process.exit(1);
+    }
+
+    rawArgs.deadline = argv[index + 1] as "good" | "best";
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-c:v") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    rawArgs.encoder = argv[index + 1];
+
+    skipNext();
+
+    continue;
+  }
+
+  if (arg === "-lavfi") {
+    if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
+      logMissingArg(arg);
+
+      process.exit(1);
+    }
+
+    rawArgs.lavfi = argv[index + 1];
+
+    skipNext();
+
+    continue;
+  }
+}
+
+if (seeking) {
+  rawArgs.output = { ...rawArgs.output, ...seeking };
+
+  seeking = undefined;
+}
+
+if (!rawArgs.inputs) {
+  printUsage();
+
+  // if the user isn't using any of the quick actions we require the -i flag
+  console.error("Input file is required");
+
+  process.exit(1);
+}
+
+const parsed = ArgsSchema.safeParse(rawArgs);
+
+if (!parsed.success) {
+  console.error("Error parsing the arguments");
+
+  console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
+
+  process.exit(1);
+}
+
+export const parsedArgs = parsed.data;

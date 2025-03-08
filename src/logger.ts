@@ -1,6 +1,7 @@
 import os from "os";
 import path from "path";
 
+import { parsedArgs } from "./args";
 import { CONFIG_PATH } from "./paths";
 import { CLI_NAME, LOG_FILE_NAME } from "./constants";
 import { existsSync, mkdirSync, appendFileSync } from "fs";
@@ -111,6 +112,10 @@ const log = (message: Message, level: Level, options?: Options) => {
 
   if (LEVELS_FOR_CONSOLE.includes(level) || options?.logToConsole) {
     consoleLog(consoleMessage);
+  }
+
+  if (parsedArgs.noLogFile) {
+    return;
   }
 
   writeToFile(message, level);

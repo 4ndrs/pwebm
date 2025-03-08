@@ -1,8 +1,10 @@
-import { ipc } from "./ipc";
 import { queue } from "./queue";
 import { logger } from "./logger";
+import { ipcServer } from "./ipc/server";
 
-export const assertNever = (value: never) => {
+type AssertNever = (value: never) => never;
+
+export const assertNever: AssertNever = (value) => {
   throw new Error(`Unexpected value: ${value}`);
 };
 
@@ -15,7 +17,7 @@ export const cleanExit: CleanExit = async (code = 0) => {
 
   await queue.abortProcessing();
 
-  ipc.stopListener();
+  ipcServer.stop();
 
   process.exit(code);
 };

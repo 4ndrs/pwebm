@@ -1,9 +1,14 @@
-import { ipc } from "./ipc";
 import { queue } from "./queue";
 import { logger } from "./logger";
 import { CLI_NAME } from "./constants";
-import { parseArgs } from "./args";
 import { cleanExit } from "./utils";
+import { ipcServer } from "./ipc/server";
+import { ipcClient } from "./ipc/client";
+import { parsedArgs } from "./args";
+
+const argv = Bun.argv.slice(2);
+
+logger.info("argv: " + argv.join(" "));
 
 process.title = CLI_NAME;
 
@@ -51,12 +56,6 @@ process.on("unhandledRejection", (reason) => {
   cleanExit(1);
 });
 
-const args = Bun.argv.slice(2);
-
-logger.info("argv: " + args.join(" "));
-
-const parsedArgs = await parseArgs(args);
-
 // let's check if ffmpeg and ffprobe are available before encoding anything
 try {
   const ffmpegProcess = Bun.spawnSync(["ffmpeg", "-hide_banner", "-version"]);
@@ -90,7 +89,7 @@ try {
 
 try {
   // try sending the args to the running process if there is one
-  await ipc.sendMessage({
+  await ipcClient.sendMessage({
     type: "enqueue",
     data: parsedArgs,
   });
@@ -103,9 +102,9 @@ try {
 
   queue.push(parsedArgs);
 
-  ipc.startListener();
+  ipcServer.start();
 
   await queue.processQueue();
 
-  ipc.stopListener();
+  ipcServer.stop();
 }

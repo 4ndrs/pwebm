@@ -28,6 +28,7 @@ export const ArgsSchema = ConfigSchema.merge(
     encoder: ConfigSchema.shape.encoder.default(config.encoder),
     cpuUsed: ConfigSchema.shape.cpuUsed.default(config.cpuUsed),
     deadline: ConfigSchema.shape.deadline.default(config.deadline),
+    noLogFile: ConfigSchema.shape.noLogFile.default(config.noLogFile),
     sizeLimit: ConfigSchema.shape.sizeLimit.default(config.sizeLimit),
     videoPath: ConfigSchema.shape.videoPath.default(config.videoPath),
   }),

@@ -3,6 +3,7 @@ import { DEFAULT_VIDEO_PATH, expandHome } from "../paths";
 
 export const ConfigSchema = z.object({
   subs: z.boolean().default(false),
+  noLogFile: z.boolean().default(false),
   encoder: z.string().default("libvpx-vp9"),
   sizeLimit: z.number().default(4),
   crf: z.number().default(24),

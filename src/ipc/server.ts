@@ -1,21 +1,14 @@
-import os from "os";
-import path from "path";
-
-import { queue } from "./queue";
-import { status } from "./status";
-import { logger } from "./logger";
-import { TEMP_PATH } from "./paths";
+import { queue } from "../queue";
+import { status } from "../status";
+import { logger } from "../logger";
 import { unlinkSync } from "fs";
-import { assertNever } from "./utils";
-import { PIPE_NAME, SOCKET_NAME } from "./constants";
-import { IPCSchema, ResponseSchema } from "./schema/ipc";
+import { assertNever } from "../utils";
+import { SOCKET_FILE } from "./constants";
+import { IPCSchema, ResponseSchema } from "../schema/ipc";
 
-import type { StatusSchema } from "./schema/status";
+import os from "os";
+
 import type { UnixSocketListener } from "bun";
-
-// windows doesn't have unix sockets but named pipes
-const SOCKET_FILE =
-  os.platform() === "win32" ? PIPE_NAME : path.join(TEMP_PATH, SOCKET_NAME);
 
 let listener: UnixSocketListener<undefined> | undefined;
 
@@ -72,8 +65,6 @@ const startListener = () => {
             );
             break;
           case "status":
-            logger.info("Received status request, sending the current status");
-
             socket.end(
               JSON.stringify({
                 type: "status",
@@ -116,67 +107,7 @@ const stopListener = () => {
   }
 };
 
-// overloading
-type SendMessage = {
-  (message: Exclude<IPCSchema, { type: "status" }>): Promise<void>;
-  (message: Extract<IPCSchema, { type: "status" }>): Promise<StatusSchema>;
-};
-
-const sendMessage: SendMessage = async (message) =>
-  new Promise(async (resolve, reject) => {
-    try {
-      const socket = await Bun.connect({
-        unix: SOCKET_FILE,
-        socket: {
-          data: (socket, rawData) => {
-            socket.end();
-
-            const parsedData = ResponseSchema.safeParse(
-              JSON.parse(rawData.toString()),
-            );
-
-            if (!parsedData.success) {
-              // couldn't parse
-              logger.error("Invalid response received through the socket");
-
-              return reject();
-            }
-
-            if (!parsedData.data.success) {
-              // request did not succeed
-              return reject();
-            }
-
-            if (parsedData.data.type === "status") {
-              const { data } = parsedData.data;
-
-              return resolve(data);
-            }
-
-            return resolve(undefined as void & StatusSchema);
-          },
-        },
-      });
-
-      socket.write(JSON.stringify(message));
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        error.code === "ENOENT" &&
-        message.type !== "enqueue"
-      ) {
-        logger.info("No current main instance running", {
-          logToConsole: true,
-        });
-      }
-
-      reject(error);
-    }
-  });
-
-export const ipc = {
-  sendMessage,
-  stopListener,
-  startListener,
+export const ipcServer = {
+  stop: stopListener,
+  start: startListener,
 };
