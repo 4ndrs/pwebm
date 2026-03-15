@@ -48,7 +48,7 @@ const encode = async (args: ArgsSchema) => {
     outputSeeking.push("-to", args.output.stopTime);
   }
 
-  const lavfi = args.lavfi ? ["-lavfi", args.lavfi] : [];
+  const vf = args.vf ? ["-vf", args.vf] : [];
   const extraParams = args.extraParams || [];
 
   const encoder = args.extraParams?.includes("-c:v")
@@ -90,7 +90,7 @@ const encode = async (args: ArgsSchema) => {
       args.encoder,
       "-crf",
       args.crf.toString(),
-      ...lavfi,
+      ...vf,
       "-b:v",
       "0",
       "-preset",
@@ -194,10 +194,10 @@ const encode = async (args: ArgsSchema) => {
   // this won't work with input seeking since they will be de-synced
   const subtitles = `subtitles=${escapeSpecialCharacters(args.inputs[0].file)}`;
 
-  if (args.subs && args.lavfi) {
-    lavfi[1] += "," + subtitles;
+  if (args.subs && args.vf) {
+    vf[1] += "," + subtitles;
   } else if (args.subs) {
-    lavfi.push("-lavfi", subtitles);
+    vf.push("-vf", subtitles);
   }
 
   // we don't want any of these
@@ -224,7 +224,7 @@ const encode = async (args: ArgsSchema) => {
     args.deadline,
     "-cpu-used",
     args.cpuUsed.toString(),
-    ...lavfi,
+    ...vf,
     "-b:v",
     "0",
     "-row-mt",
@@ -613,18 +613,10 @@ const deduceDuration = async (args: ArgsSchema) => {
   // the duration is only used for bitrate calculation for size limited
   // webms and the percentage that is shown during the encoding process
 
-  // no output seeking, let's just pick the longest input if no lavfi concat
-  // with the input seeking times or duration of the input metadata
-  if (!args.lavfi?.includes("concat")) {
-    const durations = getInputDurations(args.inputs, metadata);
-
-    return Math.max(...durations);
-  }
-
-  // if lavfi concat is used, let's sum the durations of the inputs
+  // no output seeking, let's just pick the longest
   const durations = getInputDurations(args.inputs, metadata);
 
-  return durations.reduce((acc, curr) => acc + curr, 0);
+  return Math.max(...durations);
 };
 
 const getInputDurations = (

@@ -4,7 +4,7 @@ Utility to encode size restricted webm files with ffmpeg.
 
 When executed multiple times, the additional encoding requests will be put inside a queue that will be handled in the first instance that was executed.
 
-When not specified, the output file name will be the current unix timestamp (with 13 digits plus 3 random additional ones, e.g.: `1741140729397902.webm`), and saved in `~/Movies/pwebm/` (macOs) or `~/Videos/pwebm/` (all others).
+When not specified, the output file name will be the current unix timestamp (with 13 digits plus 3 random additional ones, e.g.: `1741140729397902.webm`), and saved in `~/Movies/pwebm/` (macOS) or `~/Videos/pwebm/` (all others).
 
 # Installation
 
@@ -29,7 +29,7 @@ bun i -g git+https://github.com/4ndrs/pwebm.git
 
 In 2022, I wrote a script for the mpv media player called [PureMPV](https://github.com/4ndrs/PureMPV) that would help extracting the currently watched video's information, like the timestamps at certain points, and the cropping coordinates, which would then later be used for encoding videos with ffmpeg with specific parameters.
 
-Up to that point, I mostly spent the time encoding short webm files to keep and share on some imageboards, as well as encoding some mkv files with streams and attachments copied, so I wanted to integrate this functionality in some way with PureMPV. I didn't like the idea of having PureMPV to do the encoding itself, I wanted a seperate process to handle this independently, so I could stop or start another mpv window without affecting the encoding process. I wrote down some of the initial requirements at the time, which were the following:
+Up to that point, I mostly spent the time encoding short webm files to keep and share on some imageboards, as well as encoding some mkv files with streams and attachments copied, so I wanted to integrate this functionality in some way with PureMPV. I didn't like the idea of having PureMPV to do the encoding itself, I wanted a separate process to handle this independently, so I could stop or start another mpv window without affecting the encoding process. I wrote down some of the initial requirements at the time, which were the following:
 
 - Encoding webm files with size limits (first crf mode, then bitrate mode on retries)
 - Having a queue for handling multiple encodings
@@ -63,7 +63,7 @@ The script has different arguments that can be used to customize the encoding pr
 |-to| The end time of the segment to encode|
 |-c:v| The video codec to use. Default is **libvpx-vp9**|
 |-crf| The Constant Rate Factor to use. Default is **24**|
-|-lavfi| The set of filters to pass to ffmpeg|
+|-vf| The set of video filters to pass to ffmpeg|
 |-deadline| The deadline passed to ffmpeg for libvpx-vp9. Default is **good**|
 |-cpu-used|The cpu-used passed to ffmpeg for libvpx-vp9. Default is **0**|
 |-subs| Burn the subtitles|
@@ -71,9 +71,9 @@ The script has different arguments that can be used to customize the encoding pr
 |--video-path| The path to save the video files. Default is **~/Movies/pwebm/** on macOs, and **~/Videos/pwebm/** on everything else|
 |-ep, --extra-params| Extra parameters to pass to ffmpeg|
 
-If the codec option `c:v` is set to `libvpx` for v8 webms, or `libvpx-vp9` for vp9 webms, the script will generate a webm with the choosen options and size limit in MiB. If the codec is set to anything else, the script will generate an mkv file with all streams copied, including the attachments, and reencode the video stream with the choosen crf; no size limitations will be applied here.
+If the codec option `c:v` is set to `libvpx` for v8 webms, or `libvpx-vp9` for vp9 webms, the script will generate a webm with the chosen options and size limit in MiB. If the codec is set to anything else, the script will generate an mkv file with all streams copied, including the attachments, and re-encode the video stream with the chosen crf; no size limitations will be applied here.
 
-The `subs` option will only trigger on webms, burning the subtitles onto the video stream. The internal implementation of this option is just picking the first input file's subtitles, and applying the subtitle filter to the resulting output. If you need to pick subtitles in a different file, you can use the `-lavfi` option to pass the subtitles filter manually for now.
+The `subs` option will only trigger on webms, burning the subtitles onto the video stream. The internal implementation of this option is just picking the first input file's subtitles, and applying the subtitle filter to the resulting output. If you need to pick subtitles in a different file, you can use the `-vf` option to pass the subtitles filter manually for now.
 
 >[!NOTE]
 >The `subs` option doesn't work with input seeking. If you need to seek, make sure you are using output seeking, otherwise the resulting webm will have the subtitles burned at the wrong time.

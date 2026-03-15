@@ -19,7 +19,7 @@ export const ArgsSchema = ConfigSchema.merge(
         startTime: z.string().optional(),
       })
       .optional(),
-    lavfi: z.string().optional(),
+    vf: z.string().optional(),
     extraParams: z.array(z.string()).optional(),
     // the next ones come from the config schema
     // we are just replacing the defaults with the values loaded from the config file

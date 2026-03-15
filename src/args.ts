@@ -22,7 +22,7 @@ const RECOGNIZED_ARGS = [
   "-i",
   "-ss",
   "-to",
-  "-lavfi",
+  "-vf",
   "-c:v",
   "-deadline",
   "-crf",
@@ -53,7 +53,7 @@ Options:
   -i <input>                 The input file to encode
   -ss <start_time>           The start time (same as ffmpeg's -ss)
   -to <stop_time>            The stop time (same as ffmpeg's -to)
-  -lavfi <filters>           The set of filters to pass to ffmpeg
+  -vf <filters>              The set of video filters to pass to ffmpeg
   -c:v <encoder>             The video encoder to use (default is ${config.encoder})
   -deadline {good,best}      The deadline for libvpx-vp9; good is the recommended one, best has the best
                              compression efficiency but takes the most time (default is ${config.deadline})
@@ -62,7 +62,7 @@ Options:
                              the number the faster the encoding will be with a quality trade-off (default is ${config.cpuUsed})
   -subs                      Burn the subtitles onto the output file; this flag will automatically use
                              the subtitles found in the first input file, to use a different file use
-                             the -lavfi flag with the subtitles filter directly
+                             the -vf flag with the subtitles filter directly
   -sl, --size-limit <limit>  The size limit of the output file in MiB, use 0 for no limit (default is ${config.sizeLimit})
   --video-path <path>        The video path where the video files are stored (default is ${config.videoPath})
                              this is overridden if the output file is specified
@@ -400,14 +400,14 @@ for (let index = 0; index < argv.length; index++) {
     continue;
   }
 
-  if (arg === "-lavfi") {
+  if (arg === "-vf") {
     if (argv[index + 1] === undefined || argv[index + 1].startsWith("-")) {
       logMissingArg(arg);
 
       process.exit(1);
     }
 
-    rawArgs.lavfi = argv[index + 1];
+    rawArgs.vf = argv[index + 1];
 
     skipNext();
 
